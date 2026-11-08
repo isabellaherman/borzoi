@@ -1,0 +1,12 @@
+{
+  "name": "borzoi",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bun scripts/build.mjs",
+    "check": "bend src/PROOF.bend && bend vendor/bend-ui/PROOF.bend",
+    "test": "mkdir -p .build && bend src/Domain.bend -o .build/domain.mjs && bend src/Graph.bend -o .build/graph.mjs && bun test",
+    "dev": "bun scripts/serve.mjs"
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "name": "bend-ui",
+  "version": "1.0.3",
+  "description": "Design system in Bend: tokens in TOKENS.bend, rules in LAWS.bend.",
+  "type": "module",
+  "main": "ui.js",
+  "exports": {
+    ".": "./ui.js",
+    "./agent": "./agent.js",
+    "./thread": "./thread.js",
+    "./follow": "./follow.js",
+    "./ui.css": "./ui.css",
+    "./TOKENS.bend": "./TOKENS.bend",
+    "./MOTION.bend": "./MOTION.bend",
+    "./brand/*": "./brand/*",
+    "./keys": "./keys.js",
+    "./KEYS.bend": "./KEYS.bend",
+    "./SPEC.bend": "./SPEC.bend",
+    "./syntax": "./syntax.js",
+    "./SYNTAX.bend": "./SYNTAX.bend",
+    "./diagram": "./diagram.js",
+    "./DIAGRAM.bend": "./DIAGRAM.bend"
+  },
+  "files": [
+    "ui.js",
+    "ui.css",
+    "icons.js",
+    "agent.js",
+    "thread.js",
+    "follow.js",
+    "keys.js",
+    "syntax.js",
+    "diagram.js",
+    "TOKENS.bend",
+    "MOTION.bend",
+    "KEYS.bend",
+    "SYNTAX.bend",
+    "DIAGRAM.bend",
+    "SPEC.bend",
+    "LAWS.bend",
+    "PROOF.bend",
+    "brand",
+    "ICONS-LICENSE",
+    "docs"
+  ],
+  "scripts": {
+    "check": "bend PROOF.bend",
+    "docs": "bun docs/read-laws.js && cd docs && bun index.html",
+    "site": "bun docs/read-laws.js && rm -rf site && bend docs/index.html -o site"
+  }
+}

@@ -1,0 +1,6 @@
+dist/
+.build/
+.DS_Store
+node_modules/
+*.zip
+.openai/sites.local.json

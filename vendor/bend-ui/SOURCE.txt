@@ -1,0 +1,2 @@
+Unmodified Bend-UI 1.0.3 snapshot from /Users/isabellaherman/Documents/HOC/Bend-UI.
+Bundled for reproducible, self-contained static deployment.
