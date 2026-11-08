@@ -32,6 +32,8 @@ Import `bend-ui/workspace` (or `workspace.js` from a source snapshot). It loads 
 | Scrollable preview with intrinsic diagram width | `preview`, `preview__viewport`, `preview__content`, `preview__footer` | Preview min/max heights | Grid and ordered-bounds law; browser scroll checks |
 | Readable revision snapshots | `revision-list`, `revision-list__header`, `revision-list__source` | Snapshot max height | Positive grid-bound law; restore regression tests in Borzoi |
 | Sidebar utility area and responsive interaction | `side__footer`, `side__caption`; `createSidebar(side, toggle)` | Existing spacing and breakpoint | Universal inside/desktop-dismissal laws; browser navigation checks |
+| Connect existing nodes by dragging (Borzoi turns it into `A --> B` in the source) | `mountDiagram(el, data, { isValidConnection, onConnect })`; `.diagram__handle` (a `.dot`), the drag line is a `.diagram__wires` path | Existing `--dot-size`, wire and arrowhead | Browser checks in the step 1 and step 2 review artifacts; the app's own rules (no loop, no repeated arrow) are Borzoi laws |
+| Add a node below, connect or rename from a menu on the node | `mountDiagram(el, data, { nodeMenu })`; the node is a `.dropdown` with the lib's `.menu`/`.menu__item`; `.diagram__open` | Existing focus, menu and layer tokens | Browser checks in the node menu review artifact |
 
 `WORKSPACE.bend` owns feedback tone, timeout policy, pane direction and outside-click dismissal. `workspace.js` adapts these decisions to DOM and browser events. `TOKENS.bend` owns new visual values, exposed by `ui.js`. `workspace.css` adds named compositions; it does not restyle base components or app IDs. `WORKSPACE_LAWS.bend` and `WORKSPACE_PROOF.bend` add 15 laws through the existing proof entry point.
 

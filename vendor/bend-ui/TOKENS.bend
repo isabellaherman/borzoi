@@ -205,3 +205,17 @@ def preview_min_height() -> U32: 256
 def preview_max_height() -> U32: 640
 def snapshot_max_height() -> U32: 192
 def breadcrumb_gap() -> U32: space_2()
+
+# Chart: a series' color is the accent this strong (percent), mixed toward the surface.
+def chart_tone_1() -> U32: 100
+def chart_tone_2() -> U32: 66
+def chart_tone_3() -> U32: 40
+def chart_tone_4() -> U32: 22
+def chart_gap() -> U32: space_hairline()   # the surface between slices
+def chart_lift() -> U32: space_1()         # how far a pointed slice steps out
+def chart_hole() -> U32: 60                # a donut's hole, percent of its radius
+def chart_dim() -> U32: 40                 # the rest while one is pointed, percent opacity
+def chart_bar_max() -> U32: space_5()      # a bar is never wider
+def chart_bar_gap() -> U32: space_2()      # the least space between two bars
+def chart_axis_x() -> U32: space_6()       # the labels' column, left of the plot
+def chart_axis_y() -> U32: space_5()       # the labels' row, under the plot
