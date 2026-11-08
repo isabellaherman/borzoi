@@ -93,3 +93,38 @@ describe('Mermaid flowchart subset',()=>{
     const source='flowchart TD\n'+Array.from({length:61},(_,i)=>`N${i}[Node ${i}]`).join('\n');expect(G.parse(source).error).toContain('60 nodes');
   });
 });
+
+describe('drag to connect',()=>{
+  const source='flowchart TD\n  A[Question] --> B[Evidence]\n  C[Conclusion]';
+  test('a connection is one Mermaid line appended after the untouched source',()=>{
+    const next=G.connect(source,'B','C');
+    expect(next).toBe(source+'\n  B --> C');expect(next.startsWith(source)).toBe(true);
+    expect(G.connect(source+'\n','B','C')).toBe(source+'\n  B --> C');
+    expect(array(G.parse(next).edges).map(e=>`${e.from}>${e.to}`)).toEqual(['A>B','B>C']);
+  });
+  test('the decision crosses into JavaScript as a native boolean',()=>{
+    expect(G.can_connect(source,'B','C')).toBe(true);
+    expect(G.can_connect(source,'B','A')).toBe(false);
+    expect(G.can_connect(source,'A','B')).toBe(false);
+    expect(G.can_connect(source,'A','A')).toBe(false);
+    expect(G.can_connect('flowchart TD\nA[broken','A','B')).toBe(false);
+  });
+  test('a connection that would pass the size limit is refused',()=>{
+    const full='flowchart TD\n'+Array.from({length:60},(_,i)=>`N${i}`).join('\n')+'\n'+Array.from({length:120},(_,i)=>`N${i%59} --> N${i%59+1}`).join('\n');
+    expect(G.parse(full).error).toBe('');expect(G.can_connect(full,'N0','N59')).toBe(false);
+  });
+});
+
+describe('node menu',()=>{
+  test('adding, adding below and renaming each append one line and stay valid',()=>{
+    const first=G.add_node('','Start');expect(first).toBe('flowchart TD\n  N1["Start"]');
+    const below=G.add_node_below(first,'N1','Next ação');expect(below).toBe(first+'\n  N1 --> N2["Next ação"]');
+    const renamed=G.rename_node(below,'N1','Begin');expect(renamed.startsWith(below)).toBe(true);
+    const g=G.parse(renamed);expect(g.error).toBe('');
+    expect(array(g.nodes).map(n=>`${n.id}:${n.label}`)).toEqual(['N1:Begin','N2:Next ação']);
+  });
+  test('labels with brackets and quotes cannot break the source',()=>{
+    const next=G.add_node('flowchart TD\nA','a [b] "c"');expect(G.parse(next).error).toBe('');
+    expect(array(G.parse(next).nodes)[1].label).toBe("a [b] 'c'");
+  });
+});

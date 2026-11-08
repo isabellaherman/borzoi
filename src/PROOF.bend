@@ -38,3 +38,19 @@ def L.initial_is_empty(): {==}
 def L.new_document_is_blank(id, name): {==}
 def L.blank_checkpoint_has_no_history(id, name, stamp): {==}
 def L.empty_write_has_no_projects(): {==}
+
+def L.write_line_only_appends(source, line): {==}
+def L.connect_writes_one_arrow(source, from, to): {==}
+def L.connect_adds_a_line(): {==}
+def L.connect_after_line_break(): {==}
+def L.connected_source_has_the_arrow(): {==}
+def L.new_arrow_is_allowed(): {==}
+def L.loop_is_refused(): {==}
+def L.repeated_arrow_is_refused(): {==}
+def L.self_arrow_is_refused(): {==}
+def L.invalid_source_is_refused(): {==}
+def L.new_node_takes_a_free_id(): {==}
+def L.first_node_starts_a_flowchart(): {==}
+def L.node_below_is_one_arrow(): {==}
+def L.quotes_in_labels_are_kept_safe(): {==}
+def L.rename_keeps_the_node(): {==}

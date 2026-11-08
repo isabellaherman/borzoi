@@ -2,6 +2,7 @@
 import Base
 import ./Domain.bend as D
 import ./Parser.bend as P
+import ./Graph.bend as G
 
 # UNIVERSAL: typing cannot change any saved version.
 law edit_preserves_history:
@@ -100,3 +101,63 @@ law blank_checkpoint_has_no_history:
 # REGRESSION: an empty input event cannot create a project.
 law empty_write_has_no_projects:
   {D.write_source(D.initial(), "") == D.initial() : D.Workspace}
+
+# UNIVERSAL: writing from the diagram never edits what is already written; it adds one line at the end.
+law write_line_only_appends:
+  for +source: String
+  for line: String
+  {G.write_line(source, line) == G.base(source) ++ G.line_break(G.base(source)) ++ "  " ++ line : String}
+
+# UNIVERSAL: a connection is exactly the line `from --> to`.
+law connect_writes_one_arrow:
+  for +source: String
+  for from: String
+  for to: String
+  {G.connect(source, from, to) == G.write_line(source, from ++ " --> " ++ to) : String}
+
+# REGRESSION: the new arrow goes on its own line at the end, with or without a final line break.
+law connect_adds_a_line:
+  {G.connect("flowchart TD\nA --> B", "B", "C") == "flowchart TD\nA --> B\n  B --> C" : String}
+
+law connect_after_line_break:
+  {G.connect("flowchart TD\nA --> B\n", "B", "C") == "flowchart TD\nA --> B\n  B --> C" : String}
+
+# REGRESSION: the connected source parses with the new arrow.
+law connected_source_has_the_arrow:
+  {G.parse(G.connect("flowchart TD\nA --> B\nC", "A", "C")) ==
+   P.Graph{[P.Node{"A", "A"}, P.Node{"B", "B"}, P.Node{"C", "C"}], [P.Edge{"A", "B", ""}, P.Edge{"A", "C", ""}], "", 0n} : P.Graph}
+
+# REGRESSION: allowed and refused connections.
+law new_arrow_is_allowed:
+  {G.can_connect("flowchart TD\nA --> B\nC", "A", "C") == True{} : Bool}
+
+law loop_is_refused:
+  {G.can_connect("flowchart TD\nA --> B", "B", "A") == False{} : Bool}
+
+law repeated_arrow_is_refused:
+  {G.can_connect("flowchart TD\nA --> B", "A", "B") == False{} : Bool}
+
+law self_arrow_is_refused:
+  {G.can_connect("flowchart TD\nA --> B", "A", "A") == False{} : Bool}
+
+law invalid_source_is_refused:
+  {G.can_connect("flowchart LR\nA --> B\nC", "A", "C") == False{} : Bool}
+
+# REGRESSION: a new node takes the first free id, N1, N2, …
+law new_node_takes_a_free_id:
+  {G.add_node("flowchart TD\nA --> N1", "Step") == "flowchart TD\nA --> N1\n  N2[\"Step\"]" : String}
+
+law first_node_starts_a_flowchart:
+  {G.add_node("", "Start") == "flowchart TD\n  N1[\"Start\"]" : String}
+
+law node_below_is_one_arrow:
+  {G.add_node_below("flowchart TD\nA --> B", "B", "Next") == "flowchart TD\nA --> B\n  B --> N1[\"Next\"]" : String}
+
+# REGRESSION: a double quote in a label cannot break the source.
+law quotes_in_labels_are_kept_safe:
+  {G.add_node("flowchart TD\nA", "say \"hi\"") == "flowchart TD\nA\n  N1[\"say 'hi'\"]" : String}
+
+# REGRESSION: renaming writes the node again; the parser keeps its id and takes the new label.
+law rename_keeps_the_node:
+  {G.parse(G.rename_node("flowchart TD\nA[Idea] --> B", "A", "Plan")) ==
+   P.Graph{[P.Node{"A", "Plan"}, P.Node{"B", "B"}], [P.Edge{"A", "B", ""}], "", 0n} : P.Graph}
