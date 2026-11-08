@@ -175,3 +175,28 @@ describe('colors',()=>{
     expect(G.parse('flowchart TD\n  A::b').error).toContain(':::');
   });
 });
+
+describe('deleting projects and diagrams',()=>{
+  const two=()=>{let w=seeded();w=D.create_diagram(w,w.project,'Second');w=D.update(w,{$:'Write',source:'flowchart TD\nX --> Y'});w=D.create_project(w,'Other');return w;};
+  test('deleting a project that is not open keeps the open diagram and the rest',()=>{
+    const w=two(),first=encode(w).workspace.projects[1];
+    const next=D.delete_project(w,first.id);
+    expect(array(next.projects).map(p=>p.name)).toEqual(['Other']);
+    expect(next.project).toBe(w.project);expect(next.document).toBe(w.document);
+  });
+  test('deleting the open diagram opens another, and its history goes with it',()=>{
+    let w=two();const test=array(w.projects)[1],[second,start]=array(test.documents);
+    w=D.open(w,test.id,second.id);const next=D.delete_diagram(w,test.id,second.id);
+    expect(array(array(next.projects)[1].documents).map(d=>d.name)).toEqual([start.name]);
+    // The first diagram left in the list opens: here, the newer project's.
+    const other=array(next.projects)[0];
+    expect(next.project).toBe(other.id);expect(next.document).toBe(array(other.documents)[0].id);
+  });
+  test('ids are never reused after a delete',()=>{
+    const w=D.delete_project(two(),two().project),next=D.create_project(w,'New');
+    expect(next.project).toBe(w.next_id);
+  });
+  test('deleting something missing changes nothing',()=>{
+    const w=two();expect(snapshot(D.delete_project(w,999))).toBe(snapshot(w));expect(snapshot(D.delete_diagram(w,w.project,999))).toBe(snapshot(w));
+  });
+});

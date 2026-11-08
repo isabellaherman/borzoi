@@ -60,7 +60,12 @@ function renderNavigation(){
       if(d.id===workspace.document&&p.id===workspace.project)b.setAttribute('aria-current','page');items.append(b);
     }
     items.append(navButton('New diagram',()=>nameDialog('New diagram','Untitled diagram',value=>{checkpoint();change(D.create_diagram(workspace,p.id,value),{navigation:true});}),'plus'));
-    items.append(navButton('Rename project',()=>nameDialog('Rename project',p.name,value=>change(D.rename_project(workspace,p.id,value),{navigation:true}))));
+    // The project's own actions sit in the lib's Dropdown menu.
+    const options=navButton('Project options',()=>{},'chevron-down');options.setAttribute('aria-haspopup','menu');options.setAttribute('aria-expanded','false');
+    items.append(dropdown(options,[
+      menuItem('Rename project','text',()=>nameDialog('Rename project',p.name,value=>change(D.rename_project(workspace,p.id,value),{navigation:true}))),
+      element('hr','separator'),menuItem('Delete project','x',()=>deleteProject(p)),
+    ]));
     group.append(head,items);root.append(group);
   }
 }
@@ -94,6 +99,7 @@ function colorItem(name,tone,checked,onClick){
   text.append(element('span',tone?`tag tag--${tone}`:'tag',name));b.append(menuIcon(''),text,menuIcon('check','icon icon--sm menu__check'));b.addEventListener('click',onClick);return b;
 }
 const group=items=>items.length?[element('hr','separator'),...items]:[];
+function dropdown(trigger,items,end=false){const dd=element('div','dropdown'),menu=element('div',end?'menu menu--end':'menu');menu.setAttribute('role','menu');menu.hidden=true;menu.append(...items);dd.append(trigger,menu);return dd;}
 function diagramActions(data){
   const id=i=>data.ids[i],allowed=(a,b)=>!locked&&Boolean(G.can_connect(currentSource(),id(a),id(b)));
   const next=i=>[...new Set(data.edges.filter(e=>e.from===i).map(e=>e.to))];
@@ -172,10 +178,21 @@ function nameDialog(title,initial,onSubmit){
   const actions=element('div','actions'),cancel=button('Cancel',()=>ui.modal.close()),submit=element('button','btn btn--primary','Save');submit.type='submit';actions.append(cancel,submit);form.append(label,actions);body.append(form);
   form.addEventListener('submit',e=>{e.preventDefault();const value=input.value.trim();if(!value){input.setCustomValidity('Enter a name.');input.reportValidity();return;}ui.modal.close();onSubmit(value);});input.addEventListener('input',()=>input.setCustomValidity(''));input.focus();input.select();
 }
+function confirmDelete(title,text,onDelete){
+  const body=openModal(title),actions=element('div','actions');
+  actions.append(button('Cancel',()=>ui.modal.close()),button('Delete',()=>{ui.modal.close();onDelete();},'btn btn--primary'));
+  body.append(element('p','text',text),element('p','detail','This can\'t be undone. Download a backup first if you may need it.'),actions);
+}
+const diagrams=n=>n===1?'1 diagram':`${n} diagrams`;
+function deleteProject(p){const n=array(p.documents).length;confirmDelete('Delete project?',`Delete “${p.name}” and its ${diagrams(n)}, with their history?`,()=>{checkpoint();change(D.delete_project(workspace,p.id),{navigation:true});notice('Project deleted.');});}
+function deleteDiagram(){const d=doc();if(!d)return;confirmDelete('Delete diagram?',`Delete “${d.name}” and its history?`,()=>{change(D.delete_diagram(workspace,workspace.project,d.id),{navigation:true});notice('Diagram deleted.');});}
 function download(data,filename,type){const url=URL.createObjectURL(new Blob([data],{type})),a=document.createElement('a');a.href=url;a.download=filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 function backup(){download(JSON.stringify(recoveryPayload??{...encode(workspace),exportedAt:stamp()},null,2),`borzoi-${recoveryPayload?'recovery':'backup'}-${new Date().toISOString().slice(0,10)}.json`,'application/json');}
 $('#new-project').onclick=()=>nameDialog('New project','',name=>{checkpoint();change(D.create_project(workspace,name),{navigation:true});});
-$('#rename-diagram').onclick=()=>nameDialog('Rename diagram',doc().name,name=>change(D.update(workspace,{$:'Rename',name}),{navigation:true}));
+{const trigger=$('#rename-diagram'),spot=document.createComment('');trigger.before(spot);spot.replaceWith(dropdown(trigger,[
+  menuItem('Rename diagram','text',()=>nameDialog('Rename diagram',doc().name,name=>change(D.update(workspace,{$:'Rename',name}),{navigation:true}))),
+  ...group([menuItem('Delete diagram','x',deleteDiagram)]),
+]));}
 $('#mode').addEventListener('click',e=>{const b=e.target.closest('[data-mode]');if(!b)return;checkpoint();change(D.set_mode(workspace,b.dataset.mode==='edit'?1:0),{navigation:true});});
 ui.source.maxLength=MAX_SOURCE;
 ui.source.addEventListener('input',()=>{const firstWrite=!doc();change(D.write_source(workspace,ui.source.value),{navigation:firstWrite});clearTimeout(previewTimer);previewTimer=setTimeout(renderGraph,180);});

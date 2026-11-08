@@ -228,3 +228,65 @@ def is_legacy_demo(w: Workspace) -> Bool:
 
 def remove_legacy_demo(+w: Workspace) -> Workspace:
   Bool.pick(Workspace, is_legacy_demo(w), initial(), w)
+
+# ---------- Delete a project or a diagram ----------
+# Only the chosen one goes. If it was open, the first diagram left opens; with none left, nothing is open.
+type Location is Data:
+  Location{project: Nat, document: Nat}
+
+def keep_document(d: Document, drop: Bool, rest: List<&2, Document>) -> List<&2, Document>:
+  match drop:
+    case True{}: rest
+    case False{}: d <> rest
+
+def keep_project(p: Project, drop: Bool, rest: List<&2, Project>) -> List<&2, Project>:
+  match drop:
+    case True{}: rest
+    case False{}: p <> rest
+
+def drop_documents(ds: List<&2, Document>, +id: Nat) -> List<&2, Document>:
+  match ds:
+    case Nil{}: Nil{}
+    case Document{+i, n, s, h} <> t:
+      keep_document(Document{i, n, s, h}, Nat.is_eq(i, id), drop_documents(t, id))
+
+def drop_project(ps: List<&2, Project>, +id: Nat) -> List<&2, Project>:
+  match ps:
+    case Nil{}: Nil{}
+    case Project{+i, n, ds} <> t:
+      keep_project(Project{i, n, ds}, Nat.is_eq(i, id), drop_project(t, id))
+
+def drop_diagram(ps: List<&2, Project>, +project: Nat, +document: Nat) -> List<&2, Project>:
+  match ps:
+    case Nil{}: Nil{}
+    case Project{+i, n, +ds} <> t:
+      Project{i, n, Bool.pick(List<&2, Document>, Nat.is_eq(i, project), drop_documents(ds, document), ds)} <> drop_diagram(t, project, document)
+
+def first_location(ps: List<&2, Project>) -> Maybe<&2, Location>:
+  match ps:
+    case Nil{}: None{}
+    case Project{i, n, Document{did, dn, s, h} <> ds} <> t: Some{Location{i, did}}
+    case Project{i, n, Nil{}} <> t: first_location(t)
+
+def reselect(w: Workspace, there: Maybe<&2, Location>) -> Workspace:
+  match w there:
+    case Workspace{ps, next, p, d, mode} None{}: Workspace{ps, next, 0n, 0n, mode}
+    case Workspace{ps, next, p, d, mode} Some{Location{lp, ld}}: Workspace{ps, next, lp, ld, mode}
+
+def settle_checked(w: Workspace, here: Maybe<&2, Document>, first: Maybe<&2, Location>) -> Workspace:
+  match here:
+    case Some{doc}: w
+    case None{}: reselect(w, first)
+
+def settle(w: Workspace) -> Workspace:
+  match w:
+    case Workspace{+ps, next, +p, +d, mode}:
+      settle_checked(Workspace{ps, next, p, d, mode}, find_project(ps, p, d), first_location(ps))
+
+def delete_project(w: Workspace, +id: Nat) -> Workspace:
+  match w:
+    case Workspace{ps, next, p, d, mode}: settle(Workspace{drop_project(ps, id), next, p, d, mode})
+
+def delete_diagram(w: Workspace, +project: Nat, +document: Nat) -> Workspace:
+  match w:
+    case Workspace{ps, next, p, d, mode}: settle(Workspace{drop_diagram(ps, project, document), next, p, d, mode})

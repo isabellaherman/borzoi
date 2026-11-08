@@ -71,3 +71,7 @@ def L.color_writes_class_and_definition(): {==}
 def L.color_replaces_color(): {==}
 def L.no_color_removes_it(): {==}
 def L.rename_keeps_the_color(): {==}
+def L.delete_diagram_keeps_the_rest(): {==}
+def L.delete_open_diagram_opens_another(): {==}
+def L.delete_open_project_opens_another(): {==}
+def L.delete_last_project_opens_nothing(): {==}

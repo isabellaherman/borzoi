@@ -229,3 +229,22 @@ law no_color_removes_it:
 # REGRESSION: rewriting a line for another edit keeps the classes on it.
 law rename_keeps_the_color:
   {E.rename("flowchart TD\n  A[Idea]:::blue --> B", "A", "Plan") == "flowchart TD\n  A[\"Plan\"] --> B\n  A:::blue" : String}
+
+# REGRESSION: deleting a diagram that isn't open keeps the open one and every other diagram.
+law delete_diagram_keeps_the_rest:
+  {D.delete_diagram(D.Workspace{[D.Project{1n, "P", [D.Document{3n, "B", "b", Nil{}}, D.Document{2n, "A", "a", Nil{}}]}], 4n, 1n, 2n, 1}, 1n, 3n) ==
+   D.Workspace{[D.Project{1n, "P", [D.Document{2n, "A", "a", Nil{}}]}], 4n, 1n, 2n, 1} : D.Workspace}
+
+# REGRESSION: deleting the open diagram opens the first diagram left.
+law delete_open_diagram_opens_another:
+  {D.delete_diagram(D.Workspace{[D.Project{1n, "P", [D.Document{3n, "B", "b", Nil{}}, D.Document{2n, "A", "a", Nil{}}]}], 4n, 1n, 3n, 1}, 1n, 3n) ==
+   D.Workspace{[D.Project{1n, "P", [D.Document{2n, "A", "a", Nil{}}]}], 4n, 1n, 2n, 1} : D.Workspace}
+
+# REGRESSION: deleting the open project opens a diagram of another project, skipping empty ones.
+law delete_open_project_opens_another:
+  {D.delete_project(D.Workspace{[D.Project{5n, "Q", Nil{}}, D.Project{3n, "R", [D.Document{4n, "C", "c", Nil{}}]}, D.Project{1n, "P", [D.Document{2n, "A", "a", Nil{}}]}], 6n, 1n, 2n, 1}, 1n) ==
+   D.Workspace{[D.Project{5n, "Q", Nil{}}, D.Project{3n, "R", [D.Document{4n, "C", "c", Nil{}}]}], 6n, 3n, 4n, 1} : D.Workspace}
+
+# REGRESSION: deleting the last project leaves nothing open; ids are never reused.
+law delete_last_project_opens_nothing:
+  {D.delete_project(D.create_project(D.initial(), "P"), 1n) == D.Workspace{Nil{}, 3n, 0n, 0n, 1} : D.Workspace}
