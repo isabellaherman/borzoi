@@ -73,16 +73,16 @@ function renderGraph(){
   if(!source.trim()){
     lastGood=null;graphCache.delete(graphKey());mounted?.destroy();mounted=null;
     ui.diagram.replaceChildren(element('p','detail','Write or paste a flowchart to begin.'));
-    $('#graph-stats').textContent='No diagram yet';$('#graph-caption').textContent='Your preview will appear here.';
+    $('#graph-stats').textContent='No diagram yet';
     $('#parse-message').textContent='Open Syntax guide for the supported syntax.';setStatusTone($('#parse-message'),false);return;
   }
   let result;try{result=source.length>MAX_SOURCE?{error:'The source is too long (20,000 characters maximum).',line:0}:G.parse(source);}catch{result={error:'This diagram could not be parsed. Your source is still saved.',line:0};}
   const message=$('#parse-message');setStatusTone(message,!!result.error);
   if(result.error){
     if(!lastGood){for(const version of array(doc()?.history??{$:'Nil'})){try{const old=G.parse(version.source);if(!old.error){lastGood=graphData(old);graphCache.set(graphKey(),lastGood);displayGraph(lastGood);$('#graph-stats').textContent=`${lastGood.nodes.length} nodes · ${lastGood.edges.length} connections`;break;}}catch{}}}
-    message.textContent=(result.line?`Line ${result.line}: `:'')+result.error;$('#graph-caption').textContent=lastGood?'Showing the last valid diagram. Your draft is kept.':'Your draft is kept. Open Edit to correct the source.';
+    message.textContent=(result.line?`Line ${result.line}: `:'')+result.error;if(lastGood)$('#graph-stats').textContent='Showing the last valid diagram';
     if(!lastGood){mounted?.destroy();mounted=null;ui.diagram.replaceChildren(element('p','detail','Your diagram will appear here when the source is valid.'));$('#graph-stats').textContent='Source needs attention';}return;}
-  lastGood=graphData(result);graphCache.set(graphKey(),lastGood);displayGraph(lastGood);message.textContent='Valid flowchart · Mermaid syntax';$('#graph-stats').textContent=`${lastGood.nodes.length} nodes · ${lastGood.edges.length} connections`;$('#graph-caption').textContent='Start with a question. Follow the connections.';
+  lastGood=graphData(result);graphCache.set(graphKey(),lastGood);displayGraph(lastGood);message.textContent='Valid flowchart · Mermaid syntax';$('#graph-stats').textContent=`${lastGood.nodes.length} nodes · ${lastGood.edges.length} connections`;
 }
 function render(){
   const d=doc(),p=project(),title=d?.name??'New diagram';
