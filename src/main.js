@@ -1,5 +1,6 @@
 import { createFeedback, createDialog, configureSourceEditor, createSidebar, setStatusTone } from '../vendor/bend-ui/workspace.js';
 import { mountDiagram } from '../vendor/bend-ui/diagram.js';
+import { tokens as T, done, announce } from '../vendor/bend-ui/ui.js';
 import D from './Domain.bend';
 import metadata from '../package.json';
 import G from './Graph.bend';
@@ -57,16 +58,17 @@ function renderNavigation(){
     head.append(icon('file-text'),element('span','side__text',p.name),icon('chevron-down','icon icon--sm side__chevron'));
     for(const d of array(p.documents)){
       const b=navButton(d.name,()=>switchTo(p.id,d.id));
-      if(d.id===workspace.document&&p.id===workspace.project)b.setAttribute('aria-current','page');items.append(b);
+      if(d.id===workspace.document&&p.id===workspace.project)b.setAttribute('aria-current','page');
+      items.append(sideRow(b,d.name,[
+        menuItem('Rename','pencil',()=>nameDialog('Rename diagram',d.name,value=>change(D.rename_diagram(workspace,p.id,d.id,value),{navigation:true}))),
+        element('hr','separator'),menuItem('Delete','trash-2',()=>deleteDiagram(p,d)),
+      ]));
     }
     items.append(navButton('New diagram',()=>nameDialog('New diagram','Untitled diagram',value=>{checkpoint();change(D.create_diagram(workspace,p.id,value),{navigation:true});}),'plus'));
-    // The project's own actions sit in the lib's Dropdown menu.
-    const options=navButton('Project options',()=>{},'chevron-down');options.setAttribute('aria-haspopup','menu');options.setAttribute('aria-expanded','false');
-    items.append(dropdown(options,[
-      menuItem('Rename project','text',()=>nameDialog('Rename project',p.name,value=>change(D.rename_project(workspace,p.id,value),{navigation:true}))),
-      element('hr','separator'),menuItem('Delete project','x',()=>deleteProject(p)),
-    ]));
-    group.append(head,items);root.append(group);
+    group.append(sideRow(head,p.name,[
+      menuItem('Rename','pencil',()=>nameDialog('Rename project',p.name,value=>change(D.rename_project(workspace,p.id,value),{navigation:true}))),
+      element('hr','separator'),menuItem('Delete','trash-2',()=>deleteProject(p)),
+    ]),items);root.append(group);
   }
 }
 function graphData(result,source){
@@ -94,12 +96,18 @@ function placesOf(source){const out=new Map();for(const p of array(E.places(sour
 // the text, and the check last for the current color. A group starts with the lib's separator.
 function menuIcon(name,cls='icon icon--sm'){const svg=icon(name,cls);if(!name)svg.replaceChildren();return svg;}
 function menuItem(label,iconName,onClick){const b=element('button','menu__item');b.type='button';b.setAttribute('role','menuitem');b.append(menuIcon(iconName),element('span','',label));b.addEventListener('click',onClick);return b;}
+function radioItem(label,iconName,onClick){const b=element('button','menu__item');b.type='button';b.setAttribute('role','menuitemradio');b.setAttribute('aria-checked','false');b.append(menuIcon(iconName),element('span','',label),menuIcon('check','icon icon--sm menu__check'));b.addEventListener('click',onClick);return b;}
 function colorItem(name,tone,checked,onClick){
   const b=element('button','menu__item'),text=element('span');b.type='button';b.setAttribute('role','menuitemradio');b.setAttribute('aria-checked',String(checked));
   text.append(element('span',tone?`tag tag--${tone}`:'tag',name));b.append(menuIcon(''),text,menuIcon('check','icon icon--sm menu__check'));b.addEventListener('click',onClick);return b;
 }
 const group=items=>items.length?[element('hr','separator'),...items]:[];
 function dropdown(trigger,items,end=false){const dd=element('div','dropdown'),menu=element('div',end?'menu menu--end':'menu');menu.setAttribute('role','menu');menu.hidden=true;menu.append(...items);dd.append(trigger,menu);return dd;}
+// A side bar row: the item, then the lib's ⋯ menu at its end (Bend-UI 1.0.12 .side__row). Right-click opens it too.
+function sideRow(item,label,items){
+  const more=button('',()=>{},'btn btn--ghost btn--icon btn--sm');more.setAttribute('aria-haspopup','menu');more.setAttribute('aria-expanded','false');more.setAttribute('aria-label',`Actions for ${label}`);more.append(icon('ellipsis'));
+  const dd=dropdown(more,items,true);dd.classList.add('side__more');const row=element('div','side__row');row.append(item,dd);return row;
+}
 function diagramActions(data){
   const id=i=>data.ids[i],allowed=(a,b)=>!locked&&Boolean(G.can_connect(currentSource(),id(a),id(b)));
   const next=i=>[...new Set(data.edges.filter(e=>e.from===i).map(e=>e.to))];
@@ -145,7 +153,9 @@ function setLayout(manual){
 }
 function renderLayout(){
   const manual=isManual();$('#layout').hidden=!doc();$('#manual-note').hidden=!manual;
-  document.querySelectorAll('[data-layout]').forEach(b=>b.setAttribute('aria-pressed',String((b.dataset.layout==='manual')===manual)));
+  // The lock: closed is auto layout, open is manual. Pressed means manual (unlocked).
+  const lock=$('#layout');lock.setAttribute('aria-pressed',String(manual));lock.querySelector('use').setAttribute('href',manual?'#i-lock-open':'#i-lock');
+  lock.title=manual?'Manual layout · press and hold to lock (auto layout)':'Auto layout · press and hold to unlock (manual layout)';
 }
 function displayGraph(data,connectable=false){mounted?.destroy();mounted=null;ui.diagram.replaceChildren();if(!data.nodes.length){ui.diagram.append(element('p','detail','Add a node to begin your diagram.'));return;}mounted=mountDiagram(ui.diagram,data,connectable?diagramActions(data):{});}
 function renderGraph(){
@@ -169,8 +179,8 @@ function render(){
   const d=doc(),p=project(),title=d?.name??'New diagram';
   renderNavigation();$('#project-name').textContent=p?.name??'';$('#project-separator').hidden=!p;
   $('#diagram-crumb').textContent=title;ui.source.value=d?.source??'';ui.source.disabled=locked;$('#editor-panel').hidden=workspace.mode===0;
-  for(const id of ['rename-diagram','export','checkpoint']){$('#'+id).hidden=!d;$('#'+id).disabled=locked;}$('#actions-separator').hidden=!d;
-  document.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed',Number(b.dataset.mode==='edit')===workspace.mode));renderGraph();document.title='Borzoi — Diagrams';
+  for(const id of ['export','checkpoint']){$('#'+id).hidden=!d;$('#'+id).disabled=locked;}$('#actions-separator').hidden=!d;
+  renderMode();renderGraph();document.title='Borzoi — Diagrams';
 }
 function openModal(title){return modal.open(title);}
 function nameDialog(title,initial,onSubmit){
@@ -185,22 +195,37 @@ function confirmDelete(title,text,onDelete){
 }
 const diagrams=n=>n===1?'1 diagram':`${n} diagrams`;
 function deleteProject(p){const n=array(p.documents).length;confirmDelete('Delete project?',`Delete “${p.name}” and its ${diagrams(n)}, with their history?`,()=>{checkpoint();change(D.delete_project(workspace,p.id),{navigation:true});notice('Project deleted.');});}
-function deleteDiagram(){const d=doc();if(!d)return;confirmDelete('Delete diagram?',`Delete “${d.name}” and its history?`,()=>{change(D.delete_diagram(workspace,workspace.project,d.id),{navigation:true});notice('Diagram deleted.');});}
+function deleteDiagram(p,d){confirmDelete('Delete diagram?',`Delete “${d.name}” and its history?`,()=>{change(D.delete_diagram(workspace,p.id,d.id),{navigation:true});notice('Diagram deleted.');});}
 function download(data,filename,type){const url=URL.createObjectURL(new Blob([data],{type})),a=document.createElement('a');a.href=url;a.download=filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 function backup(){download(JSON.stringify(recoveryPayload??{...encode(workspace),exportedAt:stamp()},null,2),`borzoi-${recoveryPayload?'recovery':'backup'}-${new Date().toISOString().slice(0,10)}.json`,'application/json');}
 $('#new-project').onclick=()=>nameDialog('New project','',name=>{checkpoint();change(D.create_project(workspace,name),{navigation:true});});
-{const trigger=$('#rename-diagram'),spot=document.createComment('');trigger.before(spot);spot.replaceWith(dropdown(trigger,[
-  menuItem('Rename diagram','text',()=>nameDialog('Rename diagram',doc().name,name=>change(D.update(workspace,{$:'Rename',name}),{navigation:true}))),
-  ...group([menuItem('Delete diagram','x',deleteDiagram)]),
-]));}
-$('#mode').addEventListener('click',e=>{const b=e.target.closest('[data-mode]');if(!b)return;checkpoint();change(D.set_mode(workspace,b.dataset.mode==='edit'?1:0),{navigation:true});});
+// View mode / Edit mode: the lib's Dropdown; the trigger shows the current mode (Edit is the default, Domain.initial).
+const MODES=[['view','View mode','eye'],['edit','Edit mode','pencil']];
+function renderMode(){
+  const [,label,iconName]=MODES[workspace.mode],t=$('#mode-trigger');
+  t.replaceChildren(icon(iconName),element('span','',label),icon('chevron-down','icon icon--sm'));
+  $('#mode').querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-checked',String(b.dataset.mode===MODES[workspace.mode][0])));
+}
+$('#mode').querySelector('.menu').append(...MODES.map(([mode,label,iconName],i)=>{const b=radioItem(label,iconName,()=>{if(workspace.mode!==i){checkpoint();change(D.set_mode(workspace,i),{navigation:true});}});b.dataset.mode=mode;return b;}));
 ui.source.maxLength=MAX_SOURCE;
 ui.source.addEventListener('input',()=>{const firstWrite=!doc();change(D.write_source(workspace,ui.source.value),{navigation:firstWrite});clearTimeout(previewTimer);previewTimer=setTimeout(renderGraph,180);});
 ui.source.addEventListener('blur',()=>{if(!locked)checkpoint();});
 $('#add-node').onclick=()=>{if(!currentSource().trim()||!G.parse(currentSource()).error)nameDialog('Add node','',label=>writeFromDiagram(G.add_node(currentSource(),label)));else notice('Correct the source before adding nodes.',true);};
-$('#layout').addEventListener('click',e=>{const b=e.target.closest('[data-layout]');if(b)setLayout(b.dataset.layout==='manual');});
+// Press and hold the lock: the lib's status ring fills (data-status="hold", duration_slow); once full it waits,
+// and letting go switches the layout. Letting go early or leaving the button cancels. A plain click does nothing.
+{const lock=$('#layout');let timer=null;
+  const start=()=>{if(locked||!doc()||lock.dataset.status)return;lock.dataset.status='hold';timer=setTimeout(()=>{lock.dataset.status='warn';},T.duration_slow_ms());};
+  const stop=commit=>{clearTimeout(timer);const full=lock.dataset.status==='warn';delete lock.dataset.status;if(commit&&full)setLayout(!isManual());};
+  lock.addEventListener('pointerdown',e=>{if(e.button===0){lock.setPointerCapture(e.pointerId);start();}});
+  lock.addEventListener('pointerup',()=>stop(true));
+  lock.addEventListener('pointercancel',()=>stop(false));
+  lock.addEventListener('lostpointercapture',()=>stop(false));
+  lock.addEventListener('keydown',e=>{if((e.key===' '||e.key==='Enter')&&!e.repeat){e.preventDefault();start();}});
+  lock.addEventListener('keyup',e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();stop(true);}});
+  lock.addEventListener('blur',()=>stop(false));}
 $('#why').onclick=()=>explainManual(null);
-$('#checkpoint').onclick=()=>{if(checkpoint())notice('Version saved to history.');};
+// Saving shows on the button itself: the lib's done() turns the icon into a check; announce() says it.
+$('#checkpoint').onclick=e=>{const b=e.currentTarget;if(!b.classList.contains('is-done')&&checkpoint()){done(b);announce('Version saved');}};
 $('#backup').onclick=backup;
 $('#export').onclick=()=>download(doc().source,`${doc().name.replace(/[^a-zA-Z0-9_-]+/g,'-')||'diagram'}.mmd`,'text/plain;charset=utf-8');
 $('#history').onclick=()=>{
@@ -209,7 +234,7 @@ $('#history').onclick=()=>{
   if(!versions.length)list.append(element('p','detail','No saved versions yet.'));
   versions.forEach((v,i)=>{const item=element('article',''),head=element('div','revision-list__header'),date=Number.isNaN(Date.parse(v.stamp))?v.stamp:new Date(v.stamp).toLocaleString();const restore=button('Restore',()=>{change(D.update(workspace,{$:'Restore',index:i,stamp:stamp()}),{navigation:true});ui.modal.close();notice('Version restored. Your previous work is in history.');});head.append(element('span','item-title',`${i===0?'Latest · ':''}${date}`),restore);item.append(head,element('pre','revision-list__source',v.source));list.append(item);});
 };
-$('#syntax-help').onclick=()=>{const body=openModal('A small, familiar syntax');body.append(element('p','text','Start with flowchart TD or graph TD. Add named nodes, square labels and arrows.'),element('pre','revision-list__source','flowchart TD\n  A[Question] --> B[Evidence]\n  B -->|supports| C[Conclusion]\n  %% A comment\n  D["A label with punctuation"]'),element('p','detail','You can chain arrows, use semicolons and reuse node IDs. Color a node with A:::blue, A:::green, A:::yellow or A:::red (classDef lines are kept for other tools). This first version supports top-to-bottom flows with rectangular nodes, up to 60 nodes and 120 connections. Other shapes, return loops, subgraphs, style lines and other directions are not supported yet. Unsupported source remains saved.'));};
+$('#syntax-help').onclick=()=>{const body=openModal('A small, familiar syntax');body.append(element('p','text','Start with flowchart TD or graph TD. Add named nodes, square labels and arrows.'),element('pre','revision-list__source','flowchart TD\n  A[Question] --> B[Evidence]\n  B -->|supports| C[Conclusion]\n  %% A comment\n  D["A label with punctuation"]'),element('p','detail','You can chain arrows, use semicolons and reuse node IDs. Color a node with A:::blue, A:::green, A:::yellow or A:::red (classDef lines are kept for other tools). This first version supports top-to-bottom flows with rectangular nodes, up to 60 nodes and 120 connections. Return loops are fine, and [/slanted/] shapes show as boxes. Rounded and diamond shapes, arrows from a node to itself, subgraphs, style lines and other directions are not supported yet. Unsupported source remains saved.'));};
 $('#import').onclick=()=>{if(!locked)$('#import-file').click();else notice('Reload this tab before importing.',true);};
 $('#import-file').addEventListener('change',async e=>{
   const file=e.target.files[0];e.target.value='';if(!file)return;

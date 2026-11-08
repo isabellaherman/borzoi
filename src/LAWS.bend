@@ -132,8 +132,20 @@ law connected_source_has_the_arrow:
 law new_arrow_is_allowed:
   {G.can_connect("flowchart TD\nA --> B\nC", "A", "C") == True{} : Bool}
 
-law loop_is_refused:
-  {G.can_connect("flowchart TD\nA --> B", "B", "A") == False{} : Bool}
+law return_loop_is_allowed:
+  {G.can_connect("flowchart TD\nA --> B", "B", "A") == True{} : Bool}
+
+# REGRESSION: a source with a return loop is valid and keeps every arrow.
+law return_loop_parses:
+  {G.parse("flowchart TD\nA --> B\nB --> A") ==
+   P.Graph{[P.Node{"A", "A"}, P.Node{"B", "B"}], [P.Edge{"A", "B", ""}, P.Edge{"B", "A", ""}], "", 0n} : P.Graph}
+
+# REGRESSION: a slanted shape is read as its text.
+law slanted_shape_is_its_text:
+  {G.parse("flowchart TD\nF[/points login/]") == P.Graph{[P.Node{"F", "points login"}], [], "", 0n} : P.Graph}
+
+law self_arrow_source_is_refused:
+  {P.is_valid(G.parse("flowchart TD\nA --> A")) == False{} : Bool}
 
 law repeated_arrow_is_refused:
   {G.can_connect("flowchart TD\nA --> B", "A", "B") == False{} : Bool}
@@ -248,3 +260,8 @@ law delete_open_project_opens_another:
 # REGRESSION: deleting the last project leaves nothing open; ids are never reused.
 law delete_last_project_opens_nothing:
   {D.delete_project(D.create_project(D.initial(), "P"), 1n) == D.Workspace{Nil{}, 3n, 0n, 0n, 1} : D.Workspace}
+
+# REGRESSION: renaming a diagram that isn't open renames only it and keeps what is open.
+law rename_diagram_renames_only_it:
+  {D.rename_diagram(D.Workspace{[D.Project{1n, "P", [D.Document{3n, "B", "b", Nil{}}, D.Document{2n, "A", "a", Nil{}}]}], 4n, 1n, 2n, 1}, 1n, 3n, "C") ==
+   D.Workspace{[D.Project{1n, "P", [D.Document{3n, "C", "b", Nil{}}, D.Document{2n, "A", "a", Nil{}}]}], 4n, 1n, 2n, 1} : D.Workspace}

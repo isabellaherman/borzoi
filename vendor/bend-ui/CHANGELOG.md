@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.0.14 (2026-11-08)
+
+- **Docs: every page has its own address**: `/components/button`, `/foundations/color`, `/patterns/chat` (the group is the side bar's section); the Overview is the root. The address changes as you move, back and forward work, and a link opens that page. On GitHub Pages a deep link goes through `404.html`, which hands it to the docs (`?p=`); `bun run site` copies it into `site/`. Nothing in the lib changes.
+
+## 1.0.13 (2026-11-08)
+
+- **Every button you already have looks and measures exactly as in 1.0.12** (checked against the published site): plain `.btn`, `.btn--primary`, `.btn--ghost`, `.btn--sm`, `.btn--lg`, `.btn--icon`, `.btn--round`, disabled. Everything below is opt-in.
+- **Styles and tones**: `.btn--filled`, `.btn--tinted`, `.btn--bordered`, `.btn--plain`, `.btn--link`, in accent (default), `.btn--neutral` or `.btn--danger`. `.btn--primary` is filled accent and `.btn--ghost` plain neutral, as before.
+- **xl**: `.btn--xl` (48) is new. SPEC.bend's control scale is now 24, 32, 36, 48 (approved by the owner); the xl icon button holds a 24px icon (`icon_xl`) with 12px around it.
+- **Wide**: `.btn--wide` keeps the height and adds one step of room on each side (sm 12, md 16, lg 24, xl 32).
+- **Shape**: rounded stays the default. `theme({ radius: "rounded" | "pill" | "sharp" })`, `data-radius` on any container, or `.btn--pill` / `.btn--sharp`.
+- **States and content**: `aria-disabled` keeps a disabled button findable (ui.js stops its clicks); `.btn--toggle` with `aria-pressed`; `.btn__count`; a `.kbd` inside a button.
+- **Animations**: `.btn--reveal`, `.btn--hold` (fires `confirm` on release, WCAG 2.5.2), `.btn--async` with `busy()` and `done()`, `data-copy`, `.btn--extend`, and `data-reserve` so a changing button never changes width. `announce()` and `initButtons()` are exported from ui.js.
+- **No loose values**: the button's side padding now comes from tokens (`btn_padding_x` and its sm/lg/xl and wide steps; same values as before), `brightness(1.08)` is `btn_hover_brightness`, and `opacity: .5` is `disabled_opacity` (also for disabled menu items). New tokens: `control_xl`, `icon_xl` (alias), `btn_padding_x_sm/lg/xl`, `btn_wide_padding_x*`, `btn_hover_brightness`, `disabled_opacity`.
+- Docs: the Button page has a Playground (every style in every tone, plus an icon-only column, all one width; Shape, Size and Width filters), Animations, Accessibility (collapsed), Code and Laws. The Side bar's examples sit on a canvas.
+
+## 1.0.12 (2026-11-08)
+
+- **Menus open above everything**: every Dropdown menu opens in the browser's top layer (`popover`), so no scroll area cuts it and no layer covers it. It sits by its button (`.menu--end` aligns it to the end), opens up when it doesn't fit below, and follows while the page or a list scrolls. The direction comes from the new **MENU.bend** (`opens_up`); ui.js only measures. `.menu--up` still forces it up.
+- **Side bar row actions**: `.side__row` with a `.dropdown.side__more` at its end. The ⋯ shows on hover, keyboard focus, while its menu is open and on the current item, and always on narrow screens; on a section it sits before the chevron. A right-click, the context-menu key or `Shift+F10` on a row opens the same menu with the focus on its first item. A section's toggle may sit in a row.
+- **37 new icons** (Lucide 0.460.0, ISC), 64 in all, 2.9 KB compressed: `arrow-down`, `arrow-left`, `arrow-right`, `chevron-up`, `chevron-left`, `chevron-right`, `chevrons-up-down`, `arrow-up-down`, `corner-down-left`, `ellipsis`, `ellipsis-vertical`, `trash-2`, `pencil`, `copy`, `external-link`, `download`, `upload`, `refresh-cw`, `undo-2`, `redo-2`, `link`, `filter`, `grip-vertical`, `settings`, `lock-open`, `eye`, `eye-off`, `info`, `circle-alert`, `circle-x`, `star`, `bell`, `folder`, `user`, `calendar`, `house`, `image`.
+- Docs: the Side bar page shows row actions; the Icons page shows the new icons. No new token, motion or law.
+
 ## 1.0.11 (2026-11-08)
 
 - **Side bar: sections and groups**: every part that opens and closes is a `.side__section`. Opening one closes the others in its group; without groups the whole side bar is one group. `.side__group` is now an optional group: its sections close each other, never another group's. `data-side-multiple` on a group (or on the `.side`) keeps its sections open together. **Breaking**: rename `.side__group` to `.side__section` in apps.

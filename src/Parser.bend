@@ -149,6 +149,27 @@ def insert_node(xs: List<&2, Node>, id: String, label: String, exists: Bool, exp
     case True{} False{}: xs
     case False{} _: Node{id, label} <> xs
 
+# Slanted shapes ([/text/], [\text\], [/text\], [\text/]) are read as their text; the node is drawn as a box.
+def is_slant(+c: U32) -> Bool:
+  U32.is_eq(c, 47) || U32.is_eq(c, 92)
+
+def last_is_slant(s: String) -> Bool:
+  match s:
+    case SNil{}: False{}
+    case SCon{Chr{+c}, SNil{}}: is_slant(c)
+    case SCon{h, SCon{a, b}}: last_is_slant(SCon{a, b})
+
+def drop_last(s: String) -> String:
+  match s:
+    case SNil{}: SNil{}
+    case SCon{h, SNil{}}: SNil{}
+    case SCon{h, SCon{a, b}}: SCon{h, drop_last(SCon{a, b})}
+
+def shape_text(s: String) -> String:
+  match s:
+    case SNil{}: SNil{}
+    case SCon{Chr{+c}, +t}: Bool.pick(String, is_slant(c) && last_is_slant(t), String.trim(drop_last(t)), SCon{Chr{c}, t})
+
 def add_node(+xs: List<&2, Node>, +id: String, label: String, explicit: Bool) -> List<&2, Node>:
   insert_node(xs, id, label, has_node(xs, id), explicit)
 
@@ -175,7 +196,7 @@ def parse_tokens(ts: List<&2, Token>, phase: U32, +previous: String, edge_label:
     case Token{0, +id, l} <> t 0:
       parse_tokens(t, 1, id, "", add_node(nodes, id, id, False{}), edges)
     case Token{1, label, l} <> t 1:
-      parse_tokens(t, 4, previous, "", add_node(nodes, previous, label, True{}), edges)
+      parse_tokens(t, 4, previous, "", add_node(nodes, previous, shape_text(label), True{}), edges)
     case Token{6, w, l} <> t 1: parse_tokens(t, 1, previous, "", nodes, edges)
     case Token{6, w, l} <> t 4: parse_tokens(t, 4, previous, "", nodes, edges)
     case Token{2, w, l} <> t 1: parse_tokens(t, 2, previous, "", nodes, edges)

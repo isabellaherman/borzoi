@@ -4,6 +4,8 @@
 // loads the components (ui.css) and the icon sprite, and marks narrow screens.
 
 import T from "./TOKENS.bend";
+import MENU from "./MENU.bend";
+import MOTION from "./MOTION.bend";
 import { ICONS } from "./icons.js";
 import "./ui.css";
 
@@ -34,9 +36,12 @@ const VARS = {
   "--radius-md": () => px(T.radius_md()), "--radius-lg": () => px(T.radius_lg()),
   "--radius-full": () => px(T.radius_full()),
   "--control-sm": () => px(T.control_sm()), "--control-md": () => px(T.control_md()),
-  "--control-lg": () => px(T.control_lg()),
+  "--btn-padding-x": () => px(T.btn_padding_x()), "--btn-padding-x-sm": () => px(T.btn_padding_x_sm()), "--btn-padding-x-lg": () => px(T.btn_padding_x_lg()), "--btn-padding-x-xl": () => px(T.btn_padding_x_xl()),
+  "--btn-wide-padding-x": () => px(T.btn_wide_padding_x()), "--btn-wide-padding-x-sm": () => px(T.btn_wide_padding_x_sm()), "--btn-wide-padding-x-lg": () => px(T.btn_wide_padding_x_lg()), "--btn-wide-padding-x-xl": () => px(T.btn_wide_padding_x_xl()),
+  "--control-lg": () => px(T.control_lg()), "--control-xl": () => px(T.control_xl()),
+  "--btn-hover-brightness": () => T.btn_hover_brightness(), "--disabled-opacity": () => String(T.disabled_opacity() / 100),
   "--icon-sm": () => px(T.icon_sm()), "--icon-md": () => px(T.icon_md()),
-  "--icon-lg": () => px(T.icon_lg()), "--icon-stroke": () => T.icon_stroke(),
+  "--icon-lg": () => px(T.icon_lg()), "--icon-xl": () => px(T.icon_xl()), "--icon-stroke": () => T.icon_stroke(),
   "--dot-size": () => px(T.dot_size()), "--block-min-lines": () => String(T.block_min_lines()), "--ring-offset": () => px(T.ring_offset()), "--ring-width": () => px(T.ring_width()),
   "--side-padding": () => px(T.side_padding()), "--side-rail": () => px(T.side_rail()), "--side-width": () => px(T.side_width()),
   "--window-margin": () => px(T.window_margin()), "--window-max": () => px(T.window_max()),
@@ -138,7 +143,7 @@ const sideOf = (b) => (b.dataset.sideToggle ? document.getElementById(b.dataset.
 const sideToggles = (side) => [...document.querySelectorAll("[data-side-toggle]")].filter((b) => sideOf(b) === side);
 export function initSide(side) {
   side.querySelectorAll(".side__section").forEach((s) => {
-    const t = s.querySelector(":scope > .side__toggle"), items = s.querySelector(":scope > .side__items");
+    const t = s.querySelector(":scope > .side__toggle, :scope > .side__row > .side__toggle"), items = s.querySelector(":scope > .side__items");
     if (!t || !items) return;
     if (!items.id) items.id = "side-items-" + ++sideUid;
     t.setAttribute("aria-controls", items.id);
@@ -148,7 +153,7 @@ export function initSide(side) {
   side.inert = isDrawer(side) && !open;
 }
 function setSection(section, open) {
-  const t = section.querySelector(":scope > .side__toggle"), items = section.querySelector(":scope > .side__items");
+  const t = section.querySelector(":scope > .side__toggle, :scope > .side__row > .side__toggle"), items = section.querySelector(":scope > .side__items");
   if (!t || (t.getAttribute("aria-expanded") === "true") === open) return;
   const h = items?.scrollHeight ?? 0;
   t.setAttribute("aria-expanded", String(open));
@@ -210,10 +215,31 @@ narrow.addEventListener("change", initSides);
 // outside close. Opening or picking doesn't take focus from where the person is typing.
 const ddMenu = (dd) => dd.querySelector(":scope > .menu");
 const ddButton = (dd) => dd.querySelector(':scope > [aria-haspopup="menu"]');
-function ddSet(dd, open) {
-  ddMenu(dd).hidden = !open;
-  ddButton(dd).setAttribute("aria-expanded", open);
+// A menu opens in the browser's top layer (popover), so no scroll area cuts it and no layer covers it.
+// It sits by its button (.menu--end: aligned to its end), and opens up when it doesn't fit below
+// (MENU.bend: opens_up). It follows its button while the page or a list scrolls.
+function ddPlace(dd) {
+  const menu = ddMenu(dd), b = ddButton(dd).getBoundingClientRect();
+  if (!menu.matches(":popover-open")) return;
+  const gap = T.space_1(), h = menu.offsetHeight, w = menu.offsetWidth;
+  const up = menu.classList.contains("menu--up") || !!MENU.opens_up(innerHeight - b.bottom - gap, b.top - gap, h);
+  const left = Math.min(Math.max(gap, menu.classList.contains("menu--end") ? b.right - w : b.left), innerWidth - w - gap);
+  menu.style.left = left + "px";
+  menu.style.top = (up ? b.top - gap - h : b.bottom + gap) + "px";
 }
+function ddSet(dd, open) {
+  const menu = ddMenu(dd);
+  menu.hidden = !open;
+  ddButton(dd).setAttribute("aria-expanded", open);
+  if (!menu.showPopover) return;   // no top layer: the menu stays where ui.css puts it
+  if (!menu.hasAttribute("popover")) menu.setAttribute("popover", "manual");
+  if (open && !menu.matches(":popover-open")) menu.showPopover();
+  if (!open && menu.matches(":popover-open")) menu.hidePopover();
+  ddPlace(dd);
+}
+const ddFollow = () => document.querySelectorAll(".dropdown").forEach((dd) => ddMenu(dd) && !ddMenu(dd).hidden && ddPlace(dd));
+addEventListener("scroll", ddFollow, true);
+addEventListener("resize", ddFollow);
 const ddCloseAll = (except) => document.querySelectorAll(".dropdown").forEach((dd) => { if (dd !== except && ddMenu(dd) && !ddMenu(dd).hidden) ddSet(dd, false); });
 document.addEventListener("mousedown", (e) => {
   if (e.target.closest(".dropdown > [aria-haspopup='menu'], .dropdown > .menu")) e.preventDefault();   // keep the caret
@@ -241,10 +267,119 @@ document.addEventListener("keydown", (e) => {
   items[Math.max(0, next)].focus();
 });
 
+// ---------- Side bar row actions ----------
+// <div class="side__row"><button class="btn btn--ghost">…</button>
+//   <div class="dropdown side__more"><button class="btn btn--ghost btn--icon btn--sm" aria-haspopup="menu" aria-label="Actions for …">⋯</button><div class="menu menu--end" role="menu" hidden>…</div></div></div>
+// A right-click on the row, the context-menu key or Shift+F10 opens the same menu, focus on its first item.
+function openRowMenu(row) {
+  const dd = row.querySelector(":scope > .side__more");
+  if (!dd || !ddMenu(dd)) return false;
+  ddCloseAll(dd);
+  if (ddMenu(dd).hidden) ddSet(dd, true);
+  (ddMenu(dd).querySelector(".menu__item:not(:disabled)") ?? ddButton(dd)).focus();
+  return true;
+}
+document.addEventListener("contextmenu", (e) => {
+  const row = e.target.closest(".side__row");
+  if (row && openRowMenu(row)) e.preventDefault();
+});
+document.addEventListener("keydown", (e) => {
+  if (!(e.key === "ContextMenu" || (e.key === "F10" && e.shiftKey))) return;
+  const row = e.target.closest?.(".side__row");
+  if (row && openRowMenu(row)) e.preventDefault();
+});
+
+// ---------- Buttons: what they say, hold to confirm, busy and done, copy ----------
+// announce(text): a polite live region, so what a button did is said, not only shown.
+let btnLive = null;
+export function announce(text) {
+  if (!btnLive) { btnLive = document.createElement("div"); btnLive.className = "sr-only"; btnLive.setAttribute("role", "status"); document.body.appendChild(btnLive); }
+  btnLive.textContent = ""; requestAnimationFrame(() => { btnLive.textContent = text; });
+}
+const btnLess = matchMedia("(prefers-reduced-motion: reduce)");
+const btnLabels = (btn) => [...btn.querySelectorAll(".btn__label")];
+const btnSay = (btn, text) => btnLabels(btn).forEach((l) => { l.textContent = text; });
+// data-reserve="Publish|Published": the button keeps the width of its widest label, so nothing around it moves.
+function reserveWidth(btn) {
+  const labels = btnLabels(btn), first = labels[0]?.textContent;
+  if (!labels.length) return;
+  btn.style.minWidth = "";
+  const w = Math.max(...btn.dataset.reserve.split("|").map((t) => { btnSay(btn, t); return btn.getBoundingClientRect().width; }));
+  btnSay(btn, first);
+  btn.style.minWidth = Math.ceil(w) + "px";
+}
+// A hidden button can't be measured, so each one is measured when it first shows (and again when fonts load).
+const reserveSeen = new IntersectionObserver((list) => list.forEach((e) => { if (e.isIntersecting && e.boundingClientRect.width) { reserveWidth(e.target); reserveSeen.unobserve(e.target); } }));
+const reserveAll = () => document.querySelectorAll(".btn[data-reserve]").forEach((b) => (b.getBoundingClientRect().width ? reserveWidth(b) : reserveSeen.observe(b)));
+// busy(btn, true|false): aria-busy shows the ring in place of the label. done(btn, label): a check, then back.
+export function busy(btn, on) { on ? btn.setAttribute("aria-busy", "true") : btn.removeAttribute("aria-busy"); }
+export function done(btn, label) {
+  const idle = btnLabels(btn)[0]?.textContent;
+  busy(btn, false); btn.classList.add("is-done");
+  if (label) { btnSay(btn, label); announce(label); }
+  setTimeout(() => { btn.classList.remove("is-done"); if (label) btnSay(btn, idle); }, T.duration_read_ms());
+}
+// Hold to confirm: .btn--hold, with a .btn__fill copy of its content. The fill tracks the time held over hold_ms
+// (duration_slow); full, it shows data-armed; letting go then fires "confirm" (WCAG 2.5.2). Early, it drains back.
+function initHold(btn) {
+  if (btn.dataset.holdReady) return; btn.dataset.holdReady = "1";
+  const idle = btnLabels(btn)[0]?.textContent;
+  let t0 = 0, p = 0, raf = 0, holding = false, armed = false, locked = false;
+  const draw = () => btn.style.setProperty("--p", String(p));
+  const tick = (now) => {
+    if (!holding) return;
+    p = Math.min(1, (now - t0) / T.duration_slow_ms()); draw();
+    if (p >= 1 && !armed) { armed = true; btn.classList.add("is-armed"); if (btn.dataset.armed) btnSay(btn, btn.dataset.armed); }
+    raf = requestAnimationFrame(tick);
+  };
+  const start = () => { if (holding || locked) return; holding = true; armed = false; t0 = performance.now() - p * T.duration_slow_ms(); raf = requestAnimationFrame(tick); };
+  const drain = () => {
+    if (btnLess.matches) { p = 0; draw(); return; }
+    const from = p, s0 = performance.now(), ms = T.duration_enter_ms();
+    const step = (now) => { if (holding) return; const k = Math.min(1, (now - s0) / ms); p = from * (1 - MOTION.ease_out(k)); draw(); if (k < 1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  };
+  const stop = (commit) => {
+    if (!holding) return;
+    holding = false; cancelAnimationFrame(raf); btn.classList.remove("is-armed");
+    if (commit && armed) {
+      locked = true; btn.classList.add("is-done");
+      if (btn.dataset.done) { btnSay(btn, btn.dataset.done); announce(btn.dataset.done); }
+      btn.dispatchEvent(new CustomEvent("confirm", { bubbles: true }));
+      setTimeout(() => { locked = false; btn.classList.remove("is-done"); btnSay(btn, idle); p = 0; draw(); }, T.duration_read_ms());
+      return;
+    }
+    armed = false; btnSay(btn, idle); drain();
+  };
+  btn.addEventListener("pointerdown", (e) => { if (e.button === 0) { btn.setPointerCapture(e.pointerId); start(); } });
+  btn.addEventListener("pointerup", () => stop(true));
+  btn.addEventListener("pointercancel", () => stop(false));
+  btn.addEventListener("pointermove", (e) => { const r = btn.getBoundingClientRect(); if (holding && (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom)) stop(false); });
+  btn.addEventListener("keydown", (e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); if (!e.repeat) start(); } });
+  btn.addEventListener("keyup", (e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); stop(true); } });
+  btn.addEventListener("blur", () => stop(false));
+}
+// initButtons(): set up hold and reserved widths on buttons added later.
+export const initButtons = () => { document.querySelectorAll(".btn--hold").forEach(initHold); reserveAll(); };
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initButtons); else initButtons();
+document.fonts?.ready.then(reserveAll);
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest(".btn");
+  if (!btn) return;
+  // A button that is aria-disabled stays findable but does nothing.
+  if (btn.getAttribute("aria-disabled") === "true") { e.preventDefault(); e.stopImmediatePropagation(); return; }
+  // data-copy="text": copies it, the icon turns into a check, and "Copied" is said.
+  if (btn.hasAttribute("data-copy") && !btn.classList.contains("is-done")) {
+    navigator.clipboard?.writeText(btn.dataset.copy).catch(() => {});
+    done(btn, btn.dataset.copied || "Copied");
+  }
+}, true);
+
 // ---------- Theme per project ----------
-// A theme changes only COLOR and FONT. Space, radius and sizes stay bound by the laws.
+// A theme changes COLOR, FONT and the controls' SHAPE. Space and sizes stay bound by the laws.
 //   import { theme } from "bend-ui";
-//   theme({ accent: "#ffd21f", accentFg: "#02090a", fontDisplay: { family: "Jaro", src: jaroUrl } });
+//   theme({ accent: "#ffd21f", accentFg: "#02090a", fontDisplay: { family: "Jaro", src: jaroUrl }, radius: "pill" });
+// radius: "rounded" (default) | "pill" | "sharp", for every button; data-radius on a container does the same inside it.
 const THEME_KEYS = {
   bg: "--bg", surface: "--surface", surface2: "--surface-2", border: "--border", borderStrong: "--border-strong",
   text: "--text", text2: "--text-2", text3: "--text-3",
@@ -257,6 +392,7 @@ const FONT_KEYS = { fontSans: "--font-sans", fontDisplay: "--font-display", font
 export function theme(t = {}) {
   const root = document.documentElement.style;
   for (const [k, v] of Object.entries(t)) {
+    if (k === "radius") { document.documentElement.dataset.radius = v; continue; }
     if (THEME_KEYS[k]) { root.setProperty(THEME_KEYS[k], v); continue; }
     if (FONT_KEYS[k]) {
       const font = typeof v === "string" ? { family: v } : v;
@@ -268,7 +404,7 @@ export function theme(t = {}) {
       root.setProperty(FONT_KEYS[k], `"${font.family}", ${T.font_sans()}`);
       continue;
     }
-    console.warn(`bend-ui: "${k}" is not a theme key (only color and font).`);
+    console.warn(`bend-ui: "${k}" is not a theme key (color, font and radius).`);
   }
 }
 
@@ -285,5 +421,10 @@ export const icons = [
   "plus", "file-text", "scale", "triangle-alert", "circle-check", "x", "chevron-down", "list", "code",
   "wand-sparkles", "search", "panel-left", "book-open", "lock", "minimize-2", "maximize-2", "minimize", "maximize",
   "text", "rows-2", "columns-2", "heading-1", "pilcrow", "check",
+  "arrow-down", "arrow-left", "arrow-right", "chevron-up", "chevron-left", "chevron-right", "chevrons-up-down", "arrow-up-down", "corner-down-left",
+  "ellipsis", "ellipsis-vertical", "trash-2", "pencil", "copy", "external-link", "download", "upload", "refresh-cw",
+  "undo-2", "redo-2", "link", "filter", "grip-vertical", "settings", "lock-open", "eye", "eye-off",
+  "info", "circle-alert", "circle-x", "star", "bell", "folder", "user", "calendar", "house",
+  "image",
 ];
 export const tokens = T;

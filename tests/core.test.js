@@ -83,8 +83,9 @@ describe('Mermaid flowchart subset',()=>{
   test('unsupported syntax produces a clear error',()=>{
     for(const s of ['sequenceDiagram\nA->>B:hello','flowchart LR\nA-->B','flowchart TD\nA{Decision} --> B','flowchart TD\nA -->','flowchart TD\nA[broken','flowchart TD\nA -.-> B'])expect(G.parse(s).error.length).toBeGreaterThan(0);
   });
-  test('cycles are rejected before entering the initial DAG layout',()=>{
-    expect(G.parse('flowchart TD\nA-->B-->A').error).toContain('Return loops');expect(G.parse('flowchart TD\nA-->A').error).toContain('Return loops');
+  test('return loops are valid; an arrow to the same node is not',()=>{
+    expect(G.parse('flowchart TD\nA-->B-->A').error).toBe('');expect(array(G.parse('flowchart TD\nA-->B-->C-->A').edges).length).toBe(3);
+    expect(G.parse('flowchart TD\nA-->A').error).toContain('itself');
   });
   test('invalid duplicate label syntax and reserved end are rejected',()=>{
     expect(G.parse('flowchart TD\nA[first][second]').error.length).toBeGreaterThan(0);
@@ -105,7 +106,7 @@ describe('drag to connect',()=>{
   });
   test('the decision crosses into JavaScript as a native boolean',()=>{
     expect(G.can_connect(source,'B','C')).toBe(true);
-    expect(G.can_connect(source,'B','A')).toBe(false);
+    expect(G.can_connect(source,'B','A')).toBe(true);
     expect(G.can_connect(source,'A','B')).toBe(false);
     expect(G.can_connect(source,'A','A')).toBe(false);
     expect(G.can_connect('flowchart TD\nA[broken','A','B')).toBe(false);

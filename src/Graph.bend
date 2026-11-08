@@ -26,23 +26,23 @@ def layout_edges(es: List<&2, P.Edge>, +ns: List<&2, P.Node>) -> List<&2, D.Edge
     case P.Edge{f, t, label} <> rest:
       D.Edge{index_of(ns, f, 0n), index_of(ns, t, 0n)} <> layout_edges(rest, ns)
 
-def all_forward(es: List<&2, D.Edge>, +rows: List<&2, Nat>) -> Bool:
+# Return loops (B back to A) are allowed; only an arrow from a node to itself is not drawn yet.
+def no_self_arrow(es: List<&2, P.Edge>) -> Bool:
   match es:
     case Nil{}: True{}
-    case D.Edge{f, t} <> rest: (D.get(rows, f) < D.get(rows, t) : Nat) && all_forward(rest, rows)
+    case P.Edge{f, t, label} <> rest: Bool.not(String.eq(f, t)) && no_self_arrow(rest)
 
-def check_layout(+g: P.Graph, forward: Bool) -> P.Graph:
-  match forward:
+def check_layout(+g: P.Graph, fine: Bool) -> P.Graph:
+  match fine:
     case True{}: g
-    case False{}: P.Graph{Nil{}, Nil{}, "Return loops are not supported in this first version. Your source is still saved.", 0n}
+    case False{}: P.Graph{Nil{}, Nil{}, "An arrow from a node to itself is not supported yet. Your source is still saved.", 0n}
 
 def check_size(g: P.Graph, fits: Bool) -> P.Graph:
   match g fits:
     case P.Graph{+ns, +es, error, line} False{}:
       P.Graph{Nil{}, Nil{}, "This version supports up to 60 nodes and 120 connections per diagram.", 0n}
     case P.Graph{+ns, +es, error, line} True{}:
-      +connections = layout_edges(es, ns)
-      check_layout(P.Graph{ns, es, error, line}, all_forward(connections, D.rows(count_nodes(ns), connections)))
+      check_layout(P.Graph{ns, es, error, line}, no_self_arrow(es))
 
 def validate(g: P.Graph) -> P.Graph:
   match g:
@@ -193,7 +193,7 @@ def graph_has_edge(g: P.Graph, +from: String, +to: String) -> Bool:
     case P.Graph{ns, es, error, line}: has_edge(es, from, to)
 
 # A connection is allowed when the source is valid now, the ends differ, the arrow isn't there yet,
-# and the source stays valid with it (no loop, within the size limits).
+# and the source stays valid with it (within the size limits). Return loops are allowed.
 def can_connect(+source: String, +from: String, +to: String) -> Bool:
   P.is_valid(parse(source)) && Bool.not(String.eq(from, to)) && Bool.not(graph_has_edge(parse(source), from, to)) && P.is_valid(parse(connect(source, from, to)))
 

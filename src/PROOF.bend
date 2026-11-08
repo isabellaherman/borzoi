@@ -45,7 +45,10 @@ def L.connect_adds_a_line(): {==}
 def L.connect_after_line_break(): {==}
 def L.connected_source_has_the_arrow(): {==}
 def L.new_arrow_is_allowed(): {==}
-def L.loop_is_refused(): {==}
+def L.return_loop_is_allowed(): {==}
+def L.return_loop_parses(): {==}
+def L.self_arrow_source_is_refused(): {==}
+def L.slanted_shape_is_its_text(): {==}
 def L.repeated_arrow_is_refused(): {==}
 def L.self_arrow_is_refused(): {==}
 def L.invalid_source_is_refused(): {==}
@@ -75,3 +78,4 @@ def L.delete_diagram_keeps_the_rest(): {==}
 def L.delete_open_diagram_opens_another(): {==}
 def L.delete_open_project_opens_another(): {==}
 def L.delete_last_project_opens_nothing(): {==}
+def L.rename_diagram_renames_only_it(): {==}

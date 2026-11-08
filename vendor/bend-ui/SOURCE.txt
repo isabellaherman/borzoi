@@ -1,4 +1,4 @@
-Bend UI 1.0.11 copied from the Bend-UI working tree.
+Bend UI 1.0.14 copied from the Bend-UI working tree.
 Local working tree awaiting owner review; not a published release.
 SOURCE.lock.json records exact upstream bytes; never edit this snapshot directly.
 Run bun scripts/sync-bend-ui.mjs after editing and checking the real library.

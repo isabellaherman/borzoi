@@ -290,3 +290,8 @@ def delete_project(w: Workspace, +id: Nat) -> Workspace:
 def delete_diagram(w: Workspace, +project: Nat, +document: Nat) -> Workspace:
   match w:
     case Workspace{ps, next, p, d, mode}: settle(Workspace{drop_diagram(ps, project, document), next, p, d, mode})
+
+# Rename any diagram by its ids, open or not.
+def rename_diagram(w: Workspace, +project: Nat, +document: Nat, name: String) -> Workspace:
+  match w:
+    case Workspace{ps, next, p, d, mode}: Workspace{edit_projects(ps, project, document, Rename{name}), next, p, d, mode}
