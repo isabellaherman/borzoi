@@ -33,7 +33,7 @@ def rename(d: Document, name: String) -> Document:
 
 def checkpoint_history(xs: List<&2, Version>, +text: String, stamp: String) -> List<&2, Version>:
   match xs:
-    case Nil{}: [Version{text, stamp}]
+    case Nil{}: Bool.pick(List<&2, Version>, String.is_empty(text), Nil{}, [Version{text, stamp}])
     case Version{+old, +time} <> +tail:
       Bool.pick(List<&2, Version>, String.eq(old, text),
         Version{old, time} <> tail,
@@ -120,11 +120,8 @@ def set_mode(w: Workspace, mode: U32) -> Workspace:
   match w:
     case Workspace{ps, next, p, d, m}: Workspace{ps, next, p, d, Bool.pick(U32, U32.is_eq(mode, 1), 1, 0)}
 
-def initial_source() -> String:
-  "flowchart TD\n  A[Your first idea] --> B[What comes next]\n"
-
 def new_document(id: Nat, name: String) -> Document:
-  Document{id, name, initial_source(), [Version{initial_source(), "Created"}]}
+  Document{id, name, "", Nil{}}
 
 def create_project(w: Workspace, name: String) -> Workspace:
   match w:
@@ -190,13 +187,44 @@ def append_projects(a: List<&2, Project>, b: List<&2, Project>) -> List<&2, Proj
     case Nil{}: b
     case h <> t: h <> append_projects(t, b)
 
+def select_first(w: Workspace) -> Workspace:
+  match w:
+    case Workspace{Project{+pid, name, Document{+did, title, text, h} <> ds} <> ps, next, p, d, mode}:
+      Workspace{Project{pid, name, Document{did, title, text, h} <> ds} <> ps, next, pid, did, mode}
+    case other: other
+
 def import_projects(w: Workspace, +incoming: List<&2, Project>) -> Workspace:
   match w:
+    case Workspace{Nil{}, +next, p, d, mode}:
+      select_first(Workspace{reindex_projects(incoming, next), (next + project_span(incoming) : Nat), p, d, mode})
     case Workspace{ps, +next, p, d, mode}:
       Workspace{append_projects(ps, reindex_projects(incoming, next)), (next + project_span(incoming) : Nat), p, d, mode}
 
-def sample_source() -> String:
+# Used only to recognize the untouched seed from the first deployment. Never creates data.
+def legacy_demo_source() -> String:
   "flowchart TD\n  A[Ask a question] --> B[Gather evidence]\n  B --> C[Compare approaches]\n  C --> D[Test an idea]\n  D --> E[Record what changed]\n"
 
 def initial() -> Workspace:
-  Workspace{[Project{1n, "Research notebook", [Document{2n, "A research flow", sample_source(), [Version{sample_source(), "Created"}]}]}], 3n, 1n, 2n, 0}
+  Workspace{Nil{}, 1n, 0n, 0n, 1}
+
+# Materialize a document only when the user writes their first source.
+def write_source_checked(+w: Workspace, +text: String, selected: Maybe<&2, Document>) -> Workspace:
+  match selected:
+    case Some{d}: update(w, Write{text})
+    case None{}:
+      Bool.pick(Workspace, String.is_empty(text), w,
+        update(create_project(w, "Untitled project"), Write{text}))
+
+def write_source(+w: Workspace, text: String) -> Workspace:
+  write_source_checked(w, text, current(w))
+
+# Only the exact, unmodified original demo workspace is removable.
+def is_legacy_demo(w: Workspace) -> Bool:
+  match w:
+    case Workspace{[Project{1n, pn, [Document{2n, dn, text, [Version{old, time}]}]}], 3n, 1n, 2n, mode}:
+      String.eq(pn, "Research notebook") && String.eq(dn, "A research flow") &&
+      String.eq(text, legacy_demo_source()) && String.eq(old, legacy_demo_source()) && String.eq(time, "Created")
+    case other: False{}
+
+def remove_legacy_demo(+w: Workspace) -> Workspace:
+  Bool.pick(Workspace, is_legacy_demo(w), initial(), w)

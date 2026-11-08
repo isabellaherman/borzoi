@@ -28,7 +28,7 @@ export function decode(raw) {
     if(!docs.length)throw new Error('Each project needs at least one diagram.');
     return {$:'Project',id:pid,name:name(p.name,'Project name'),documents:list(docs)};
   });
-  if(!projects.length || !selected)throw new Error('The selected diagram is missing from the backup.');
+  if(projects.length ? !selected : w.projectId!==0 || w.documentId!==0)throw new Error('The selected diagram is missing from the backup.');
   if(!Number.isSafeInteger(w.nextId)||w.nextId<=maximum)throw new Error('The backup contains an invalid ID counter.');
   if(w.mode!==0 && w.mode!==1)throw new Error('Invalid editor mode.');
   return {$:'Workspace',projects:list(projects),next_id:w.nextId,project:w.projectId,document:w.documentId,mode:w.mode};

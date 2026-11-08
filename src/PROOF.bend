@@ -33,3 +33,8 @@ def L.arrow_preserves_direction(): {==}
 def L.labels_preserve_unicode(): {==}
 def L.incomplete_arrow_is_rejected(): {==}
 def L.repeated_reference_keeps_label(): {==}
+
+def L.initial_is_empty(): {==}
+def L.new_document_is_blank(id, name): {==}
+def L.blank_checkpoint_has_no_history(id, name, stamp): {==}
+def L.empty_write_has_no_projects(): {==}

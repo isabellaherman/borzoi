@@ -7,15 +7,18 @@ const current=w=>D.current(w).value;
 const history=w=>array(current(w).history);
 const snapshot=w=>JSON.stringify(encode(w));
 
+// Test data is explicit and confined to tests; production starts with no projects.
+const seeded=()=>D.update(D.write_source(D.create_project(D.initial(),'Test project'),'flowchart TD\nA[Start] --> B[End]'),{$:'Checkpoint',stamp:'test version'});
+
 describe('workspace invariants',()=>{
   test('editing one diagram never changes another project',()=>{
-    let w=D.initial();const first=encode(w).workspace.projects[0];
+    let w=seeded();const first=encode(w).workspace.projects[0];
     w=D.create_project(w,'Second');w=D.update(w,{$:'Write',source:'unfinished -->'});
     expect(encode(w).workspace.projects.find(p=>p.id===first.id)).toEqual(first);
     expect(current(w).source).toBe('unfinished -->');
   });
   test('restore retains an unsnapshotted draft and the original version',()=>{
-    let w=D.initial();const original=current(w).source;
+    let w=seeded();const original=current(w).source;
     w=D.update(w,{$:'Write',source:'a newer unfinished draft'});
     w=D.update(w,{$:'Restore',index:0,stamp:'2026-11-08T00:00:00Z'});
     expect(current(w).source).toBe(original);
@@ -23,29 +26,29 @@ describe('workspace invariants',()=>{
     expect(history(w).at(-1).source).toBe(original);
   });
   test('invalid selections and missing restoration leave state intact',()=>{
-    const w=D.initial();expect(snapshot(D.open(w,999,999))).toBe(snapshot(w));
+    const w=seeded();expect(snapshot(D.open(w,999,999))).toBe(snapshot(w));
     expect(snapshot(D.update(w,{$:'Restore',index:999,stamp:'now'}))).toBe(snapshot(w));
     expect(snapshot(D.create_diagram(w,999,'No parent'))).toBe(snapshot(w));
   });
   test('saving unchanged content does not duplicate a version',()=>{
-    const w=D.initial();expect(snapshot(D.update(w,{$:'Checkpoint',stamp:'now'}))).toBe(snapshot(w));
+    const w=seeded();expect(snapshot(D.update(w,{$:'Checkpoint',stamp:'now'}))).toBe(snapshot(w));
   });
   test('backup round trip keeps all project content and history',()=>{
-    let w=D.create_project(D.initial(),'Research ação');
+    let w=D.create_project(seeded(),'Diagrama ação');
     w=D.update(w,{$:'Write',source:'flowchart TD\nA[結果] --> B[ação]'});
     w=D.update(w,{$:'Checkpoint',stamp:'2026-11-08'});
     expect(snapshot(parseBackup(JSON.stringify(encode(w))))).toBe(snapshot(w));
   });
   test('repeated imports append without collisions or overwrites',()=>{
-    let w=D.initial();const first=encode(w).workspace.projects[0];
-    for(let i=0;i<12;i++)w=D.import_projects(w,D.initial().projects);
+    let w=seeded();const first=encode(w).workspace.projects[0];
+    for(let i=0;i<12;i++)w=D.import_projects(w,seeded().projects);
     const data=encode(w).workspace;expect(data.projects[0]).toEqual(first);expect(data.projects.length).toBe(13);
     const ids=data.projects.flatMap(p=>[p.id,...p.diagrams.map(d=>d.id)]);
     expect(new Set(ids).size).toBe(ids.length);expect(data.nextId).toBeGreaterThan(Math.max(...ids));
     expect(snapshot(decode(encode(w)))).toBe(snapshot(w));
   });
   test('many edit/save/restore sequences never discard earlier sources',()=>{
-    let w=D.initial();const sources=new Set([current(w).source]);
+    let w=seeded();const sources=new Set([current(w).source]);
     for(let i=0;i<80;i++){
       const source=`flowchart TD\nA[Version ${i}] --> B`;
       sources.add(source);w=D.update(w,{$:'Write',source});
@@ -56,10 +59,10 @@ describe('workspace invariants',()=>{
   });
   test('malformed backups fail before reaching the domain',()=>{
     expect(()=>parseBackup('{oops')).toThrow();
-    const a=encode(D.initial());a.version=2;expect(()=>decode(a)).toThrow();
-    const b=encode(D.initial());b.workspace.projects[0].diagrams[0].id=1;expect(()=>decode(b)).toThrow('duplicate');
-    const c=encode(D.initial());c.workspace.nextId=1;expect(()=>decode(c)).toThrow('counter');
-    const d=encode(D.initial());d.workspace.documentId=999;expect(()=>decode(d)).toThrow('missing');
+    const a=encode(seeded());a.version=2;expect(()=>decode(a)).toThrow();
+    const b=encode(seeded());b.workspace.projects[0].diagrams[0].id=1;expect(()=>decode(b)).toThrow('duplicate');
+    const c=encode(seeded());c.workspace.nextId=1;expect(()=>decode(c)).toThrow('counter');
+    const d=encode(seeded());d.workspace.documentId=999;expect(()=>decode(d)).toThrow('missing');
   });
 });
 
@@ -70,8 +73,8 @@ describe('Mermaid flowchart subset',()=>{
     expect(array(g.edges).map(e=>[e.from,e.to])).toEqual([['A','B'],['B','C'],['A','C']]);
   });
   test('unicode, edge labels, comments, semicolons, and quoted punctuation',()=>{
-    const g=G.parse('%% note\ngraph TB;A["Pesquisa; ação [1]"] -->|supports| B[結果]\n%% comment');
-    expect(g.error).toBe('');expect(array(g.nodes)[0].label).toBe('Pesquisa; ação [1]');expect(array(g.edges)[0].label).toBe('supports');
+    const g=G.parse('%% note\ngraph TB;A["Diagrama; ação [1]"] -->|supports| B[結果]\n%% comment');
+    expect(g.error).toBe('');expect(array(g.nodes)[0].label).toBe('Diagrama; ação [1]');expect(array(g.edges)[0].label).toBe('supports');
   });
   test('bare references do not erase explicit labels',()=>{
     const g=G.parse('flowchart TD\nA[One]\nA --> B\nA[Two]');expect(g.error).toBe('');expect(array(g.nodes)[0].label).toBe('Two');

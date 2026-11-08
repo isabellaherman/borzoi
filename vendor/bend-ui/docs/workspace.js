@@ -10,7 +10,7 @@ $("#open-dialog").onclick = () => {
   const form = document.createElement("form"); form.className = "form";
   const label = document.createElement("label"); label.className = "field";
   const caption = document.createElement("span"); caption.className = "field__label"; caption.textContent = "Name";
-  const input = document.createElement("input"); input.className = "input"; input.value = "Research";
+  const input = document.createElement("input"); input.className = "input"; input.value = "Untitled diagram";
   label.append(caption, input);
   const actions = document.createElement("div"); actions.className = "actions";
   const save = document.createElement("button"); save.className = "btn btn--primary"; save.textContent = "Save";

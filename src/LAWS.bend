@@ -79,3 +79,24 @@ law incomplete_arrow_is_rejected:
 
 law repeated_reference_keeps_label:
   {P.parse("flowchart TD\nA[Idea]\nA --> B") == P.Graph{[P.Node{"A", "Idea"}, P.Node{"B", "B"}], [P.Edge{"A", "B", ""}], "", 0n} : P.Graph}
+
+# REGRESSION: production starts in edit mode, with no projects or selection.
+law initial_is_empty:
+  {D.initial() == D.Workspace{Nil{}, 1n, 0n, 0n, 1} : D.Workspace}
+
+# UNIVERSAL: a newly created document has no source or invented versions.
+law new_document_is_blank:
+  for +id: Nat
+  for +name: String
+  {D.new_document(id, name) == D.Document{id, name, "", Nil{}} : D.Document}
+
+# UNIVERSAL: checkpointing an untouched blank document invents no version.
+law blank_checkpoint_has_no_history:
+  for +id: Nat
+  for +name: String
+  for stamp: String
+  {D.checkpoint(D.new_document(id, name), stamp) == D.new_document(id, name) : D.Document}
+
+# REGRESSION: an empty input event cannot create a project.
+law empty_write_has_no_projects:
+  {D.write_source(D.initial(), "") == D.initial() : D.Workspace}

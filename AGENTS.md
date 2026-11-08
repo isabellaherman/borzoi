@@ -17,3 +17,8 @@
 - Before committing app changes for Pages, run `bun run pages` and include the regenerated `docs/` output.
 - Keep code, documentation, and product UI in English.
 - Do not put personal browser data, backups, or credentials into the repository.
+
+- Production starts with no projects, diagrams, source, or synthetic history; the empty editor is immediately usable. Keep fixtures in tests and opt-in documentation only.
+- Read the displayed application version from package.json; show all three components (0.1.0).
+- Keep product copy generic to diagrams. The browser tab title is `Borzoi — Diagrams`; never derive product branding from demo data.
+- The standard footer credit is exactly `Made with Bend-UI`, linked to `https://github.com/isabellaherman/Bend-UI`, using the existing library link and detail components.
