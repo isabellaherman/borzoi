@@ -52,7 +52,7 @@ function navButton(label,fn,iconName){
 function renderNavigation(){
   const root=$('#project-list');root.replaceChildren();
   for(const p of array(workspace.projects)){
-    const group=element('div','side__group'),head=element('button','btn btn--ghost side__toggle'),items=element('div','side__items');
+    const group=element('div','side__section'),head=element('button','btn btn--ghost side__toggle'),items=element('div','side__items');
     head.type='button';head.title=p.name;head.setAttribute('aria-expanded','true');
     head.append(icon('file-text'),element('span','side__text',p.name),icon('chevron-down','icon icon--sm side__chevron'));
     for(const d of array(p.documents)){
