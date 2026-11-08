@@ -1,6 +1,7 @@
 import {test,expect,describe} from 'bun:test';
 import D from '../.build/domain.mjs';
 import G from '../.build/graph.mjs';
+import E from '../.build/edit.mjs';
 import {array,encode,decode,parseBackup} from '../src/codec.js';
 
 const current=w=>D.current(w).value;
@@ -116,15 +117,43 @@ describe('drag to connect',()=>{
 });
 
 describe('node menu',()=>{
-  test('adding, adding below and renaming each append one line and stay valid',()=>{
-    const first=G.add_node('','Start');expect(first).toBe('flowchart TD\n  N1["Start"]');
-    const below=G.add_node_below(first,'N1','Next ação');expect(below).toBe(first+'\n  N1 --> N2["Next ação"]');
-    const renamed=G.rename_node(below,'N1','Begin');expect(renamed.startsWith(below)).toBe(true);
-    const g=G.parse(renamed);expect(g.error).toBe('');
-    expect(array(g.nodes).map(n=>`${n.id}:${n.label}`)).toEqual(['N1:Begin','N2:Next ação']);
+  test('a new node gets a readable id from its name and the source stays valid',()=>{
+    const first=G.add_node('','Start');expect(first).toBe('flowchart TD\n  Start["Start"]');
+    const below=G.add_node_below(first,'Start','Next ação');expect(below).toBe(first+'\n  Start --> Next_acao["Next ação"]');
+    expect(G.add_node(below,'Start')).toBe(below+'\n  Start_2["Start"]');
+    expect(G.parse(G.add_node(below,'end')).error).toBe('');
   });
   test('labels with brackets and quotes cannot break the source',()=>{
     const next=G.add_node('flowchart TD\nA','a [b] "c"');expect(G.parse(next).error).toBe('');
     expect(array(G.parse(next).nodes)[1].label).toBe("a [b] 'c'");
+  });
+});
+
+describe('edits in place',()=>{
+  const source='flowchart TD\n  %% keep me\n  A[Idea] --> B[Draft]\n  B --> C[Review]\n  C -->|ok| D\n  E["Loose"]';
+  const lines=s=>s.split('\n');
+  const untouched=(before,after,changed)=>lines(before).filter(l=>!changed.some(c=>l.includes(c))).forEach(l=>expect(lines(after)).toContain(l));
+  const graph=s=>{const g=G.parse(s);expect(g.error).toBe('');return {nodes:array(g.nodes).map(n=>`${n.id}:${n.label}`),edges:array(g.edges).map(e=>`${e.from}>${e.to}${e.label?':'+e.label:''}`)};};
+  test('rename changes only the line that labels the node',()=>{
+    const next=E.rename(source,'B','Plan');untouched(source,next,['B[']);
+    expect(graph(next).nodes).toContain('B:Plan');expect(graph(next).edges).toEqual(graph(source).edges);
+    expect(E.rename(source,'D','Done')).toBe(source+'\n  D["Done"]');
+  });
+  test('delete removes the node, its arrows and its position; nothing else is lost',()=>{
+    const next=E.delete_node(E.move_node(source,'B',4,5),'B');untouched(source,next,['B']);
+    expect(graph(next).nodes.map(n=>n.split(':')[0])).toEqual(['A','C','D','E']);expect(graph(next).edges).toEqual(['C>D:ok']);
+    expect(next).not.toContain('borzoi B');
+  });
+  test('remove an arrow, and add a node between two',()=>{
+    expect(graph(E.remove_edge(source,'B','C')).edges).toEqual(['A>B','C>D:ok']);
+    const between=E.insert_between(source,'C','D','Check');untouched(source,between,['C -->|ok| D']);
+    expect(graph(between).edges).toEqual(['A>B','B>C','C>Check:ok','Check>D']);
+  });
+  test('manual layout lives in %% lines that Mermaid ignores',()=>{
+    let m=E.set_manual(source,true);expect(E.is_manual(m)).toBe(true);
+    m=E.move_node(E.move_node(m,'A',10,20),'A',30,40);
+    expect(array(E.places(m)).map(p=>`${p.id} ${p.x} ${p.y}`)).toEqual(['A 30 40']);
+    expect(G.parse(m)).toEqual(G.parse(source));
+    expect(E.is_manual(E.set_manual(m,false))).toBe(false);expect(array(E.places(E.set_manual(m,false))).length).toBe(1);
   });
 });

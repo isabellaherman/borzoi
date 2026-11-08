@@ -6,7 +6,7 @@
   "scripts": {
     "build": "bun scripts/build.mjs",
     "check": "bun scripts/check-ui-boundary.mjs && bend src/PROOF.bend && bend vendor/bend-ui/PROOF.bend",
-    "test": "mkdir -p .build && bend src/Domain.bend -o .build/domain.mjs && bend src/Graph.bend -o .build/graph.mjs && bend vendor/bend-ui/WORKSPACE.bend -o .build/workspace.mjs && bend vendor/bend-ui/TOKENS.bend -o .build/tokens.mjs && bun test",
+    "test": "mkdir -p .build && bend src/Domain.bend -o .build/domain.mjs && bend src/Graph.bend -o .build/graph.mjs && bend src/Edit.bend -o .build/edit.mjs && bend vendor/bend-ui/WORKSPACE.bend -o .build/workspace.mjs && bend vendor/bend-ui/TOKENS.bend -o .build/tokens.mjs && bun test",
     "dev": "bun scripts/serve.mjs",
     "pages": "bun run check && bun run test && bun run build && bun scripts/prepare-pages.mjs"
   }

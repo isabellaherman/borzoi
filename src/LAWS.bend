@@ -3,6 +3,7 @@ import Base
 import ./Domain.bend as D
 import ./Parser.bend as P
 import ./Graph.bend as G
+import ./Edit.bend as E
 
 # UNIVERSAL: typing cannot change any saved version.
 law edit_preserves_history:
@@ -143,21 +144,63 @@ law self_arrow_is_refused:
 law invalid_source_is_refused:
   {G.can_connect("flowchart LR\nA --> B\nC", "A", "C") == False{} : Bool}
 
-# REGRESSION: a new node takes the first free id, N1, N2, …
+# REGRESSION: a new node's id is its name, readable, with _2 when that id is taken.
 law new_node_takes_a_free_id:
-  {G.add_node("flowchart TD\nA --> N1", "Step") == "flowchart TD\nA --> N1\n  N2[\"Step\"]" : String}
+  {G.add_node("flowchart TD\nStep --> B", "Step") == "flowchart TD\nStep --> B\n  Step_2[\"Step\"]" : String}
+
+law readable_id_drops_accents_and_spaces:
+  {G.add_node("flowchart TD\n  A", "Próximo passo") == "flowchart TD\n  A\n  Proximo_passo[\"Próximo passo\"]" : String}
 
 law first_node_starts_a_flowchart:
-  {G.add_node("", "Start") == "flowchart TD\n  N1[\"Start\"]" : String}
+  {G.add_node("", "Start") == "flowchart TD\n  Start[\"Start\"]" : String}
 
 law node_below_is_one_arrow:
-  {G.add_node_below("flowchart TD\nA --> B", "B", "Next") == "flowchart TD\nA --> B\n  B --> N1[\"Next\"]" : String}
+  {G.add_node_below("flowchart TD\nA --> B", "B", "Next") == "flowchart TD\nA --> B\n  B --> Next[\"Next\"]" : String}
 
 # REGRESSION: a double quote in a label cannot break the source.
 law quotes_in_labels_are_kept_safe:
-  {G.add_node("flowchart TD\nA", "say \"hi\"") == "flowchart TD\nA\n  N1[\"say 'hi'\"]" : String}
+  {G.add_node("flowchart TD\nA", "say \"hi\"") == "flowchart TD\nA\n  say_hi[\"say 'hi'\"]" : String}
 
 # REGRESSION: renaming writes the node again; the parser keeps its id and takes the new label.
 law rename_keeps_the_node:
   {G.parse(G.rename_node("flowchart TD\nA[Idea] --> B", "A", "Plan")) ==
    P.Graph{[P.Node{"A", "Plan"}, P.Node{"B", "B"}], [P.Edge{"A", "B", ""}], "", 0n} : P.Graph}
+
+# ---------- Edits in place (Edit.bend). Every line a change doesn't concern stays exactly as it was. ----------
+
+# REGRESSION: renaming rewrites only the line that gives the node its label, keeping the arrow on it.
+law rename_rewrites_its_line:
+  {E.rename("flowchart TD\n  %% note\n  A[Idea] --> B\n  C", "A", "Plan") == "flowchart TD\n  %% note\n  A[\"Plan\"] --> B\n  C" : String}
+
+law rename_label_equal_to_id:
+  {E.rename("flowchart TD\n  Idea[\"Idea\"]\n  Idea --> B", "Idea", "Plan") == "flowchart TD\n  Idea[\"Plan\"]\n  Idea --> B" : String}
+
+law rename_own_line:
+  {E.rename("flowchart TD\n  A[Idea]\n  A --> B", "A", "Plan") == "flowchart TD\n  A[\"Plan\"]\n  A --> B" : String}
+
+# REGRESSION: deleting a node takes its arrows and its layout line; the other nodes stay.
+law delete_takes_its_arrows:
+  {E.delete_node("flowchart TD\n  A --> B\n  B --> C\n  %% borzoi B 1 2", "B") == "flowchart TD\n  A\n  C" : String}
+
+# REGRESSION: removing an arrow keeps both nodes; a node still on another line isn't repeated.
+law remove_arrow_keeps_nodes:
+  {E.remove_edge("flowchart TD\n  A --> B\n  B --> C", "A", "B") == "flowchart TD\n  A\n  B --> C" : String}
+
+# REGRESSION: a node between two keeps the arrow's label on the first new arrow.
+law insert_between_keeps_the_label:
+  {E.insert_between("flowchart TD\n  A -->|yes| B", "A", "B", "Check") == "flowchart TD\n  A -->|yes| Check[\"Check\"]\n  Check --> B" : String}
+
+# REGRESSION: manual layout is %% lines: a flag and one position per node, rewritten in place when it moves.
+law move_writes_one_position:
+  {E.move_node(E.move_node(E.set_manual("flowchart TD\n  A", True{}), "A", 10n, 20n), "A", 30n, 5n) ==
+   "flowchart TD\n  A\n  %% borzoi manual\n  %% borzoi A 30 5" : String}
+
+law positions_are_read_back:
+  {E.places("flowchart TD\n  A\n  %% borzoi A 30 5\n  %% note") == [E.Place{"A", 30n, 5n}] : List<&2, E.Place>}
+
+law auto_keeps_positions:
+  {E.set_manual("flowchart TD\n  A\n  %% borzoi manual\n  %% borzoi A 30 5", False{}) == "flowchart TD\n  A\n  %% borzoi A 30 5" : String}
+
+# REGRESSION: other tools read the same diagram: the layout lines are comments.
+law layout_lines_are_comments:
+  {G.parse("flowchart TD\n  A --> B\n  %% borzoi manual\n  %% borzoi A 30 5") == G.parse("flowchart TD\n  A --> B") : P.Graph}

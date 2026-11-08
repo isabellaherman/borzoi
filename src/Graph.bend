@@ -78,25 +78,104 @@ def nodes_of(g: P.Graph) -> List<&2, P.Node>:
   match g:
     case P.Graph{ns, es, error, line}: ns
 
-# The first of N1, N2, … that no node uses yet.
-def fresh_id.go(fuel: Nat, +ns: List<&2, P.Node>, +k: Nat) -> String:
-  match fuel:
-    case 0n: "N" ++ Nat.show(k)
-    case 1n+f: Bool.pick(String, P.has_node(ns, "N" ++ Nat.show(k)), fresh_id.go(f, ns, 1n+k), "N" ++ Nat.show(k))
 
-def fresh_id(+source: String) -> String:
-  +ns = nodes_of(P.parse(source))
-  fresh_id.go(1n+count_nodes(ns), ns, 1n)
+
+# Accented Latin letters lose their accent; the id keeps letters, digits and _.
+def plain(+c: U32) -> U32:
+  match c:
+    case 224: 97
+    case 225: 97
+    case 226: 97
+    case 227: 97
+    case 228: 97
+    case 192: 65
+    case 193: 65
+    case 194: 65
+    case 195: 65
+    case 196: 65
+    case 232: 101
+    case 233: 101
+    case 234: 101
+    case 235: 101
+    case 200: 69
+    case 201: 69
+    case 202: 69
+    case 236: 105
+    case 237: 105
+    case 238: 105
+    case 239: 105
+    case 205: 73
+    case 242: 111
+    case 243: 111
+    case 244: 111
+    case 245: 111
+    case 246: 111
+    case 211: 79
+    case 212: 79
+    case 213: 79
+    case 249: 117
+    case 250: 117
+    case 251: 117
+    case 252: 117
+    case 218: 85
+    case 220: 85
+    case 231: 99
+    case 199: 67
+    case 241: 110
+    case 209: 78
+    case x: x
+
+def id_char(+c: U32) -> U32:
+  Bool.pick(U32, Char.is_alpha(Chr{plain(c)}) || Char.is_digit(Chr{plain(c)}), plain(c), 95)
+
+def id_chars(s: String) -> String:
+  match s:
+    case SNil{}: SNil{}
+    case SCon{Chr{+c}, t}: SCon{Chr{id_char(c)}, id_chars(t)}
+
+def non_empty.keep(+w: String, +rest: List<&2, String>) -> List<&2, String>:
+  Bool.pick(List<&2, String>, String.is_empty(w), rest, w <> rest)
+
+def non_empty(ws: List<&2, String>) -> List<&2, String>:
+  match ws:
+    case Nil{}: Nil{}
+    case +w <> t: non_empty.keep(w, non_empty(t))
+
+def starts_with_digit(s: String) -> Bool:
+  match s:
+    case SNil{}: False{}
+    case SCon{h, t}: Char.is_digit(h)
+
+def id_base.fix(+s: String) -> String:
+  Bool.pick(String, String.is_empty(s), "Node",
+    Bool.pick(String, String.eq(String.to_lower(s), "end"), s ++ "_node",
+      Bool.pick(String, starts_with_digit(s), "N" ++ s, s)))
+
+# "Next step" → Next_step; one that starts with a digit gets an N; "end" is a Mermaid word, so it becomes end_node.
+def id_base(+label: String) -> String:
+  id_base.fix(String.join(non_empty(String.split(id_chars(String.trim(label)), '_')), "_"))
+
+def readable_id.go(fuel: Nat, +ns: List<&2, P.Node>, +base: String, +k: Nat) -> String:
+  match fuel:
+    case 0n: base ++ "_" ++ Nat.show(k)
+    case 1n+f: Bool.pick(String, P.has_node(ns, base ++ "_" ++ Nat.show(k)), readable_id.go(f, ns, base, 1n+k), base ++ "_" ++ Nat.show(k))
+
+def readable_id.pick(+ns: List<&2, P.Node>, +base: String) -> String:
+  Bool.pick(String, P.has_node(ns, base), readable_id.go(1n+count_nodes(ns), ns, base, 2n), base)
+
+# The name as an id, with _2, _3, … when that id is taken.
+def readable_id(+source: String, +label: String) -> String:
+  readable_id.pick(nodes_of(P.parse(source)), id_base(label))
 
 # The actions of the diagram's menu and drag.
 def connect(+source: String, from: String, to: String) -> String:
   write_line(source, from ++ " --> " ++ to)
 
-def add_node(+source: String, label: String) -> String:
-  write_line(source, node_text(fresh_id(source), label))
+def add_node(+source: String, +label: String) -> String:
+  write_line(source, node_text(readable_id(source, label), label))
 
-def add_node_below(+source: String, from: String, label: String) -> String:
-  write_line(source, from ++ " --> " ++ node_text(fresh_id(source), label))
+def add_node_below(+source: String, from: String, +label: String) -> String:
+  write_line(source, from ++ " --> " ++ node_text(readable_id(source, label), label))
 
 # Mermaid keeps a node's last label, so renaming is the node written again with its new label.
 def rename_node(+source: String, id: String, label: String) -> String:
