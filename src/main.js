@@ -186,7 +186,6 @@ $('#why').onclick=()=>explainManual(null);
 $('#checkpoint').onclick=()=>{if(checkpoint())notice('Version saved to history.');};
 $('#backup').onclick=backup;
 $('#export').onclick=()=>download(doc().source,`${doc().name.replace(/[^a-zA-Z0-9_-]+/g,'-')||'diagram'}.mmd`,'text/plain;charset=utf-8');
-$('#fit').onclick=()=>{const scroll=$('#canvas-scroll');scroll.scrollTo({top:0,left:Math.max(0,(scroll.scrollWidth-scroll.clientWidth)/2),behavior:'smooth'});};
 $('#history').onclick=()=>{
   const body=openModal('Version history'),list=element('div','revision-list');body.append(element('p','detail','Restoring creates a new version and preserves your current draft.'),list);
   const versions=array(doc()?.history??{$:'Nil'});
