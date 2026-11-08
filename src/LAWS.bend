@@ -207,25 +207,25 @@ law layout_lines_are_comments:
 
 # ---------- Colors: the lib's tones as Mermaid classes ----------
 
-# REGRESSION: `A:::draft` gives A the draft tone; a class that isn't one of the four tones is no color.
+# REGRESSION: `A:::yellow` gives A the lib's warning tone; any other class name is no color.
 law class_gives_a_tone:
-  {G.tones("flowchart TD\n  A[Idea]:::draft --> B\n  C:::fancy") == [G.Tone{"A", "draft"}] : List<&2, G.Tone>}
+  {G.tones("flowchart TD\n  A[Idea]:::yellow --> B\n  C:::fancy\n  D:::law") == [G.Tone{"A", "warning"}] : List<&2, G.Tone>}
 
 # REGRESSION: classes and classDef lines don't change the diagram's shape.
 law classes_keep_the_shape:
-  {G.parse("flowchart TD\n  A:::draft --> B\n  classDef draft fill:#fff") == G.parse("flowchart TD\n  A --> B") : P.Graph}
+  {G.parse("flowchart TD\n  A:::yellow --> B\n  classDef yellow fill:#fff") == G.parse("flowchart TD\n  A --> B") : P.Graph}
 
 # REGRESSION: coloring a node writes its class and, once, the tone's classDef with the lib's colors.
 law color_writes_class_and_definition:
-  {E.set_tone("flowchart TD\n  A --> B", "B", "law") == "flowchart TD\n  A --> B\n  B:::law\n  classDef law fill:#ebf6ed,stroke:#2b8a3e" : String}
+  {E.set_tone("flowchart TD\n  A --> B", "B", "green") == "flowchart TD\n  A --> B\n  B:::green\n  classDef green fill:#ebf6ed,stroke:#2b8a3e" : String}
 
 # REGRESSION: a new color replaces the old one, and the definition nobody uses any more goes.
 law color_replaces_color:
-  {E.set_tone(E.set_tone("flowchart TD\n  A --> B", "B", "law"), "B", "draft") == "flowchart TD\n  A --> B\n  B:::draft\n  classDef draft fill:#fbf3e4,stroke:#b7791f" : String}
+  {E.set_tone(E.set_tone("flowchart TD\n  A --> B", "B", "green"), "B", "yellow") == "flowchart TD\n  A --> B\n  B:::yellow\n  classDef yellow fill:#fbf3e4,stroke:#b7791f" : String}
 
 law no_color_removes_it:
-  {E.set_tone("flowchart TD\n  A --> B\n  B:::law\n  classDef law fill:#ebf6ed,stroke:#2b8a3e", "B", "") == "flowchart TD\n  A --> B" : String}
+  {E.set_tone("flowchart TD\n  A --> B\n  B:::green\n  classDef green fill:#ebf6ed,stroke:#2b8a3e", "B", "") == "flowchart TD\n  A --> B" : String}
 
 # REGRESSION: rewriting a line for another edit keeps the classes on it.
 law rename_keeps_the_color:
-  {E.rename("flowchart TD\n  A[Idea]:::accent --> B", "A", "Plan") == "flowchart TD\n  A[\"Plan\"] --> B\n  A:::accent" : String}
+  {E.rename("flowchart TD\n  A[Idea]:::blue --> B", "A", "Plan") == "flowchart TD\n  A[\"Plan\"] --> B\n  A:::blue" : String}

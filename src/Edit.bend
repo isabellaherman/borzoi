@@ -401,13 +401,14 @@ def uses(cs: List<&2, P.Class>, +name: String) -> Bool:
     case Nil{}: False{}
     case P.Class{id, n} <> t: String.eq(n, name) || uses(t, name)
 
-def definition_tone(ws: List<&2, String>) -> String:
+# The color class a classDef line defines, or "" for any other line.
+def definition_class(ws: List<&2, String>) -> String:
   match ws:
-    case +k <> +name <> rest: Bool.pick(String, String.eq(k, "classDef"), G.tone_name(name), "")
+    case +k <> +name <> rest: Bool.pick(String, String.eq(k, "classDef") && Bool.not(String.is_empty(G.tone_name(name))), name, "")
     case _: ""
 
 def unused_definition(+line: String, +cs: List<&2, P.Class>) -> Bool:
-  Bool.not(String.is_empty(definition_tone(words(line)))) && Bool.not(uses(cs, definition_tone(words(line))))
+  Bool.not(String.is_empty(definition_class(words(line)))) && Bool.not(uses(cs, definition_class(words(line))))
 
 def prune(ls: List<&2, String>, +cs: List<&2, P.Class>) -> List<&2, String>:
   match ls:
@@ -420,6 +421,6 @@ def pruned(+source: String) -> String:
 def set_tone.go(+clean: String, +id: String, +tone: String) -> String:
   pruned(Bool.pick(String, String.is_empty(G.tone_name(tone)), clean, with_definition(G.write_line(clean, id ++ ":::" ++ tone), tone)))
 
-# A tone that isn't one of the four (e.g. "") just removes the node's color.
+# A name that isn't a color (e.g. "") just removes the node's color.
 def set_tone(+source: String, +id: String, +tone: String) -> String:
   set_tone.go(text_of(without_tone(lines_of(source), id, lines_of(source))), id, tone)

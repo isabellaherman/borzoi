@@ -197,10 +197,17 @@ def graph_has_edge(g: P.Graph, +from: String, +to: String) -> Bool:
 def can_connect(+source: String, +from: String, +to: String) -> Bool:
   P.is_valid(parse(source)) && Bool.not(String.eq(from, to)) && Bool.not(graph_has_edge(parse(source), from, to)) && P.is_valid(parse(connect(source, from, to)))
 
-# ---------- Colors: the lib's four tones, written as Mermaid classes (`A:::draft`) ----------
+# ---------- Colors: blue, green, yellow and red, the lib's four tones (accent, success, warning, danger), written as Mermaid classes (`A:::green`) ----------
+
+# A color is written by its common name; each one is one of the lib's tones.
+def color_tone(+name: String) -> String:
+  Bool.pick(String, String.eq(name, "blue"), "accent",
+    Bool.pick(String, String.eq(name, "green"), "success",
+      Bool.pick(String, String.eq(name, "yellow"), "warning",
+        Bool.pick(String, String.eq(name, "red"), "danger", ""))))
 
 def tone_name(+name: String) -> String:
-  Bool.pick(String, String.eq(name, "accent") || String.eq(name, "law") || String.eq(name, "draft") || String.eq(name, "conflict"), name, "")
+  color_tone(name)
 
 type Tone is Data:
   Tone{id: String, tone: String}
@@ -218,11 +225,11 @@ def tones(source: String) -> List<&2, Tone>:
   tones.go(P.classes(source))
 
 def tone_soft(+tone: String) -> String:
-  Bool.pick(String, String.eq(tone, "accent"), T.color_accent_soft(), Bool.pick(String, String.eq(tone, "law"), T.color_law_soft(), Bool.pick(String, String.eq(tone, "draft"), T.color_draft_soft(), T.color_conflict_soft())))
+  Bool.pick(String, String.eq(tone, "accent"), T.color_accent_soft(), Bool.pick(String, String.eq(tone, "success"), T.color_success_soft(), Bool.pick(String, String.eq(tone, "warning"), T.color_warning_soft(), T.color_danger_soft())))
 
 def tone_strong(+tone: String) -> String:
-  Bool.pick(String, String.eq(tone, "accent"), T.color_accent(), Bool.pick(String, String.eq(tone, "law"), T.color_law(), Bool.pick(String, String.eq(tone, "draft"), T.color_draft(), T.color_conflict())))
+  Bool.pick(String, String.eq(tone, "accent"), T.color_accent(), Bool.pick(String, String.eq(tone, "success"), T.color_success(), Bool.pick(String, String.eq(tone, "warning"), T.color_warning(), T.color_danger())))
 
-# How the class looks in other Mermaid tools: the lib's own colors, from TOKENS.bend.
-def tone_style(+tone: String) -> String:
-  "fill:" ++ tone_soft(tone) ++ ",stroke:" ++ tone_strong(tone)
+# How a color class looks in other Mermaid tools: the lib's own colors, from TOKENS.bend.
+def tone_style(+name: String) -> String:
+  "fill:" ++ tone_soft(tone_name(name)) ++ ",stroke:" ++ tone_strong(tone_name(name))
