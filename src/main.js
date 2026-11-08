@@ -3,8 +3,9 @@ import { mountDiagram } from '../vendor/bend-ui/diagram.js';
 import D from './Domain.bend';
 import metadata from '../package.json';
 import G from './Graph.bend';
+import E from './Edit.bend';
 import { array, encode, decode, parseBackup, MAX_SOURCE, MAX_BACKUP_BYTES } from './codec.js';
-import { openStorage, StorageConflict } from './storage.js';
+import { openStorage, StorageConflict, manualNoteSeen, markManualNoteSeen } from './storage.js';
 
 const $=s=>document.querySelector(s);
 const ui={source:$('#source'),diagram:$('#diagram'),notice:$('#notice'),status:$('#save-status'),modal:$('#modal')};
@@ -67,29 +68,67 @@ function graphData(result){
   const nodes=array(result.nodes),edges=array(result.edges),ids=new Map(nodes.map((n,i)=>[n.id,i]));
   return {ids:nodes.map(n=>n.id),nodes:nodes.map(n=>({label:n.label})),edges:edges.map(e=>({from:ids.get(e.from),to:ids.get(e.to),label:e.label}))};
 }
-// Editing from the diagram: the menu on a node and dragging between nodes. Every action is one Mermaid line
-// written at the end of the source (Graph.bend), after a version of the current source is saved to history.
+// Editing from the diagram: the menu on a node, dragging between nodes and the manual layout. Every change is
+// Mermaid written by Bend: Graph.bend adds a line at the end, Edit.bend rewrites only the lines that mention
+// what changes. A version of the current source is saved to history first (moving a node doesn't make one).
 const currentSource=()=>doc()?.source??'';
-function writeFromDiagram(next){
+function writeFromDiagram(next,{version=true}={}){
   if(locked){notice('This tab is out of date. Download a backup, then reload.',true,true);return;}
   if(G.parse(next).error){notice('That change would make the diagram invalid, so it was not made.',true);return;}
-  const firstWrite=!doc();checkpoint();change(D.write_source(workspace,next),{navigation:firstWrite});
+  const firstWrite=!doc();if(version)checkpoint();change(D.write_source(workspace,next),{navigation:firstWrite});
   ui.source.value=currentSource();if(!firstWrite)renderGraph();
 }
+const isManual=()=>Boolean(doc())&&Boolean(E.is_manual(currentSource()));
+function placesOf(source){const out=new Map();for(const p of array(E.places(source)))out.set(p.id,{x:Number(p.x),y:Number(p.y)});return out;}
 function diagramActions(data){
   const id=i=>data.ids[i],allowed=(a,b)=>!locked&&Boolean(G.can_connect(currentSource(),id(a),id(b)));
-  return {
+  const next=i=>[...new Set(data.edges.filter(e=>e.from===i).map(e=>e.to))];
+  const actions={
     isValidConnection:({source:a,target:b})=>allowed(a,b),
     onConnect:({source:a,target:b})=>writeFromDiagram(G.connect(currentSource(),id(a),id(b))),
     nodeMenu:i=>locked?[]:[
       {label:'Add node below',onSelect:()=>nameDialog('Add node below','',label=>writeFromDiagram(G.add_node_below(currentSource(),id(i),label)))},
-      {label:'Rename',onSelect:()=>nameDialog('Rename node',data.nodes[i].label,label=>writeFromDiagram(G.rename_node(currentSource(),id(i),label)))},
+      ...next(i).map(j=>({label:`Add node between → ${data.nodes[j].label}`,onSelect:()=>nameDialog('Add node between','',label=>writeFromDiagram(E.insert_between(currentSource(),id(i),id(j),label)))})),
+      {label:'Rename',onSelect:()=>nameDialog('Rename node',data.nodes[i].label,label=>writeFromDiagram(E.rename(currentSource(),id(i),label)))},
       ...data.nodes.map((n,j)=>allowed(i,j)?{label:`Connect to ${n.label}`,onSelect:()=>writeFromDiagram(G.connect(currentSource(),id(i),id(j)))}:null).filter(Boolean),
+      ...next(i).map(j=>({label:`Remove arrow → ${data.nodes[j].label}`,onSelect:()=>writeFromDiagram(E.remove_edge(currentSource(),id(i),id(j)))})),
+      {label:'Delete node',onSelect:()=>writeFromDiagram(E.delete_node(currentSource(),id(i)))},
     ],
   };
+  if(isManual()){
+    // Nodes with no saved position yet (added elsewhere) wait at the top left, one under the other.
+    const places=placesOf(currentSource());let waiting=0;
+    actions.positions=data.ids.map(n=>places.get(n)??{x:16,y:16+48*waiting++});
+    actions.onNodeMove=(i,p)=>writeFromDiagram(E.move_node(currentSource(),id(i),Math.round(p.x),Math.round(p.y)),{version:false});
+  }
+  return actions;
+}
+// Manual layout is one click away: explained the first time, then marked by a tag in the toolbar.
+function explainManual(onUse){
+  const body=openModal(onUse?'Switch to manual layout?':'About manual layout'),list=element('ul','prose');
+  for(const [lead,text] of [['You gain: ','any node anywhere, and your arrangement is saved with the diagram.'],['Still standard Mermaid: ','positions are saved as %% comment lines. Other tools and agents read the same diagram and lay it out on their own.'],['Good to know: ','a node added from another tool waits at the top left until you move it. Back to Auto layout, every node is placed automatically again; your positions stay in the source for when you come back.']]){const item=element('li');item.append(element('strong','',lead),text);list.append(item);}
+  body.append(element('p','text','You place every node yourself, and Borzoi keeps your arrangement.'),list);
+  if(!onUse)return;
+  const actions=element('div','actions');actions.append(button('Keep auto layout',()=>ui.modal.close()),button('Use manual layout',()=>{ui.modal.close();markManualNoteSeen();onUse();},'btn btn--primary'));body.append(actions);
+}
+function setLayout(manual){
+  if(!doc()||manual===isManual())return;
+  if(!manual){writeFromDiagram(E.set_manual(currentSource(),false));return;}
+  const useManual=()=>{
+    // Nodes keep the place they have now; a node that was placed before goes back there.
+    let next=E.set_manual(currentSource(),true);const saved=placesOf(currentSource()),box=ui.diagram.getBoundingClientRect();
+    mounted?.nodes.forEach((b,i)=>{const n=lastGood?.ids[i];if(n&&!saved.has(n)){const r=b.getBoundingClientRect();next=E.move_node(next,n,Math.max(0,Math.round(r.left-box.left)),Math.max(0,Math.round(r.top-box.top)));}});
+    writeFromDiagram(next);
+  };
+  if(manualNoteSeen())useManual();else explainManual(useManual);
+}
+function renderLayout(){
+  const manual=isManual();$('#layout').hidden=!doc();$('#manual-note').hidden=!manual;
+  document.querySelectorAll('[data-layout]').forEach(b=>b.setAttribute('aria-pressed',String((b.dataset.layout==='manual')===manual)));
 }
 function displayGraph(data,connectable=false){mounted?.destroy();mounted=null;ui.diagram.replaceChildren();if(!data.nodes.length){ui.diagram.append(element('p','detail','Add a node to begin your diagram.'));return;}mounted=mountDiagram(ui.diagram,data,connectable?diagramActions(data):{});}
 function renderGraph(){
+  renderLayout();
   const source=doc()?.source??'';
   if(!source.trim()){
     lastGood=null;graphCache.delete(graphKey());mounted?.destroy();mounted=null;
@@ -127,6 +166,8 @@ ui.source.maxLength=MAX_SOURCE;
 ui.source.addEventListener('input',()=>{const firstWrite=!doc();change(D.write_source(workspace,ui.source.value),{navigation:firstWrite});clearTimeout(previewTimer);previewTimer=setTimeout(renderGraph,180);});
 ui.source.addEventListener('blur',()=>{if(!locked)checkpoint();});
 $('#add-node').onclick=()=>{if(!currentSource().trim()||!G.parse(currentSource()).error)nameDialog('Add node','',label=>writeFromDiagram(G.add_node(currentSource(),label)));else notice('Correct the source before adding nodes.',true);};
+$('#layout').addEventListener('click',e=>{const b=e.target.closest('[data-layout]');if(b)setLayout(b.dataset.layout==='manual');});
+$('#why').onclick=()=>explainManual(null);
 $('#checkpoint').onclick=()=>{if(checkpoint())notice('Version saved to history.');};
 $('#backup').onclick=backup;
 $('#export').onclick=()=>download(doc().source,`${doc().name.replace(/[^a-zA-Z0-9_-]+/g,'-')||'diagram'}.mmd`,'text/plain;charset=utf-8');

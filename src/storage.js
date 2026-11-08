@@ -22,3 +22,8 @@ export async function openStorage(factory=globalThis.indexedDB) {
     close(){db.close();}
   };
 }
+
+// Whether this browser has seen the manual layout note. A convenience only: when storage is blocked the note shows again.
+const NOTE='borzoi-manual-layout-note';
+export function manualNoteSeen(store=globalThis.localStorage){try{return store?.getItem(NOTE)==='seen';}catch{return false;}}
+export function markManualNoteSeen(store=globalThis.localStorage){try{store?.setItem(NOTE,'seen');}catch{}}
