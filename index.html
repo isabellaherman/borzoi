@@ -28,8 +28,8 @@
         <span class="toolbar__spacer"></span><span id="save-status" class="detail status-text hide-narrow" role="status">Saved locally</span><button class="btn btn--ghost btn--sm" id="history">History</button>
       </header>
       <div class="toolbar" role="toolbar" aria-label="Diagram">
-        <div class="segmented" id="mode" data-manual aria-label="Diagram mode"><button class="btn btn--ghost btn--sm" data-mode="view" aria-pressed="false">View</button><button class="btn btn--ghost btn--sm" data-mode="edit" aria-pressed="true">Edit</button></div>
-        <span class="toolbar__spacer"></span><span class="detail status-text hide-narrow" id="graph-stats"></span><button class="btn btn--ghost btn--sm" id="fit">Center</button><span class="toolbar__sep"></span><button class="btn btn--ghost btn--sm" id="checkpoint">Save version</button><button class="btn btn--ghost btn--sm" id="export">Export .mmd</button>
+        <div class="segmented" id="mode" data-manual aria-label="Diagram mode"><button class="btn btn--ghost btn--sm" data-mode="view" aria-pressed="false">View</button><button class="btn btn--ghost btn--sm" data-mode="edit" aria-pressed="true">Edit</button></div><button class="btn btn--ghost btn--sm" id="add-node"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>Add node</button>
+        <span class="toolbar__spacer"></span><span class="detail status-text hide-narrow" id="graph-stats"></span><button class="btn btn--ghost btn--sm" id="fit">Center</button><span class="toolbar__sep" id="actions-separator"></span><button class="btn btn--ghost btn--sm" id="checkpoint">Save version</button><button class="btn btn--ghost btn--sm" id="export">Export .mmd</button>
       </div>
       <main class="page" id="canvas-scroll" aria-label="Diagram"><div class="workbench">
         <div id="notice" hidden></div>

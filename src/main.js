@@ -65,9 +65,30 @@ function renderNavigation(){
 }
 function graphData(result){
   const nodes=array(result.nodes),edges=array(result.edges),ids=new Map(nodes.map((n,i)=>[n.id,i]));
-  return {nodes:nodes.map(n=>({label:n.label})),edges:edges.map(e=>({from:ids.get(e.from),to:ids.get(e.to),label:e.label}))};
+  return {ids:nodes.map(n=>n.id),nodes:nodes.map(n=>({label:n.label})),edges:edges.map(e=>({from:ids.get(e.from),to:ids.get(e.to),label:e.label}))};
 }
-function displayGraph(data){mounted?.destroy();mounted=null;ui.diagram.replaceChildren();if(!data.nodes.length){ui.diagram.append(element('p','detail','Add a node to begin your diagram.'));return;}mounted=mountDiagram(ui.diagram,data);}
+// Editing from the diagram: the menu on a node and dragging between nodes. Every action is one Mermaid line
+// written at the end of the source (Graph.bend), after a version of the current source is saved to history.
+const currentSource=()=>doc()?.source??'';
+function writeFromDiagram(next){
+  if(locked){notice('This tab is out of date. Download a backup, then reload.',true,true);return;}
+  if(G.parse(next).error){notice('That change would make the diagram invalid, so it was not made.',true);return;}
+  const firstWrite=!doc();checkpoint();change(D.write_source(workspace,next),{navigation:firstWrite});
+  ui.source.value=currentSource();if(!firstWrite)renderGraph();
+}
+function diagramActions(data){
+  const id=i=>data.ids[i],allowed=(a,b)=>!locked&&Boolean(G.can_connect(currentSource(),id(a),id(b)));
+  return {
+    isValidConnection:({source:a,target:b})=>allowed(a,b),
+    onConnect:({source:a,target:b})=>writeFromDiagram(G.connect(currentSource(),id(a),id(b))),
+    nodeMenu:i=>locked?[]:[
+      {label:'Add node below',onSelect:()=>nameDialog('Add node below','',label=>writeFromDiagram(G.add_node_below(currentSource(),id(i),label)))},
+      {label:'Rename',onSelect:()=>nameDialog('Rename node',data.nodes[i].label,label=>writeFromDiagram(G.rename_node(currentSource(),id(i),label)))},
+      ...data.nodes.map((n,j)=>allowed(i,j)?{label:`Connect to ${n.label}`,onSelect:()=>writeFromDiagram(G.connect(currentSource(),id(i),id(j)))}:null).filter(Boolean),
+    ],
+  };
+}
+function displayGraph(data,connectable=false){mounted?.destroy();mounted=null;ui.diagram.replaceChildren();if(!data.nodes.length){ui.diagram.append(element('p','detail','Add a node to begin your diagram.'));return;}mounted=mountDiagram(ui.diagram,data,connectable?diagramActions(data):{});}
 function renderGraph(){
   const source=doc()?.source??'';
   if(!source.trim()){
@@ -82,13 +103,13 @@ function renderGraph(){
     if(!lastGood){for(const version of array(doc()?.history??{$:'Nil'})){try{const old=G.parse(version.source);if(!old.error){lastGood=graphData(old);graphCache.set(graphKey(),lastGood);displayGraph(lastGood);$('#graph-stats').textContent=`${lastGood.nodes.length} nodes · ${lastGood.edges.length} connections`;break;}}catch{}}}
     message.textContent=(result.line?`Line ${result.line}: `:'')+result.error;if(lastGood)$('#graph-stats').textContent='Showing the last valid diagram';
     if(!lastGood){mounted?.destroy();mounted=null;ui.diagram.replaceChildren(element('p','detail','Your diagram will appear here when the source is valid.'));$('#graph-stats').textContent='Source needs attention';}return;}
-  lastGood=graphData(result);graphCache.set(graphKey(),lastGood);displayGraph(lastGood);message.textContent='Valid flowchart · Mermaid syntax';$('#graph-stats').textContent=`${lastGood.nodes.length} nodes · ${lastGood.edges.length} connections`;
+  lastGood=graphData(result);graphCache.set(graphKey(),lastGood);displayGraph(lastGood,true);message.textContent='Valid flowchart · Mermaid syntax';$('#graph-stats').textContent=`${lastGood.nodes.length} nodes · ${lastGood.edges.length} connections`;
 }
 function render(){
   const d=doc(),p=project(),title=d?.name??'New diagram';
   renderNavigation();$('#project-name').textContent=p?.name??'';$('#project-separator').hidden=!p;
   $('#diagram-crumb').textContent=title;ui.source.value=d?.source??'';ui.source.disabled=locked;$('#editor-panel').hidden=workspace.mode===0;
-  for(const id of ['rename-diagram','export','checkpoint']){$('#'+id).hidden=!d;$('#'+id).disabled=locked;}
+  for(const id of ['rename-diagram','export','checkpoint']){$('#'+id).hidden=!d;$('#'+id).disabled=locked;}$('#actions-separator').hidden=!d;
   document.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed',Number(b.dataset.mode==='edit')===workspace.mode));renderGraph();document.title='Borzoi — Diagrams';
 }
 function openModal(title){return modal.open(title);}
@@ -105,6 +126,7 @@ $('#mode').addEventListener('click',e=>{const b=e.target.closest('[data-mode]');
 ui.source.maxLength=MAX_SOURCE;
 ui.source.addEventListener('input',()=>{const firstWrite=!doc();change(D.write_source(workspace,ui.source.value),{navigation:firstWrite});clearTimeout(previewTimer);previewTimer=setTimeout(renderGraph,180);});
 ui.source.addEventListener('blur',()=>{if(!locked)checkpoint();});
+$('#add-node').onclick=()=>{if(!currentSource().trim()||!G.parse(currentSource()).error)nameDialog('Add node','',label=>writeFromDiagram(G.add_node(currentSource(),label)));else notice('Correct the source before adding nodes.',true);};
 $('#checkpoint').onclick=()=>{if(checkpoint())notice('Version saved to history.');};
 $('#backup').onclick=backup;
 $('#export').onclick=()=>download(doc().source,`${doc().name.replace(/[^a-zA-Z0-9_-]+/g,'-')||'diagram'}.mmd`,'text/plain;charset=utf-8');
