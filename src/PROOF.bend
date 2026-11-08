@@ -65,3 +65,9 @@ def L.move_writes_one_position(): {==}
 def L.positions_are_read_back(): {==}
 def L.auto_keeps_positions(): {==}
 def L.layout_lines_are_comments(): {==}
+def L.class_gives_a_tone(): {==}
+def L.classes_keep_the_shape(): {==}
+def L.color_writes_class_and_definition(): {==}
+def L.color_replaces_color(): {==}
+def L.no_color_removes_it(): {==}
+def L.rename_keeps_the_color(): {==}

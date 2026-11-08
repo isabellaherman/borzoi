@@ -157,3 +157,21 @@ describe('edits in place',()=>{
     expect(E.is_manual(E.set_manual(m,false))).toBe(false);expect(array(E.places(E.set_manual(m,false))).length).toBe(1);
   });
 });
+
+describe('colors',()=>{
+  test('a node takes one of the four tones from its Mermaid class, and the last one wins',()=>{
+    const src='flowchart TD\n  A[Idea]:::accent --> B\n  B:::fancy\n  A:::draft';
+    expect(array(G.tones(src)).map(t=>`${t.id}=${t.tone}`)).toEqual(['A=accent','A=draft']);
+    expect(G.parse(src).error).toBe('');
+  });
+  test('coloring keeps other lines, the shape and a user\'s own classes',()=>{
+    const src='flowchart TD\n  %% note\n  A[Idea]:::fancy --> B\n  classDef fancy fill:#fff';
+    const next=E.set_tone(src,'B','conflict');
+    expect(next.startsWith(src)).toBe(true);expect(G.parse(next)).toEqual(G.parse(src));
+    expect(E.set_tone(next,'B','')).toBe(src);
+  });
+  test('bad class syntax is explained',()=>{
+    expect(G.parse('flowchart TD\n  A:::').error).toContain('class name');
+    expect(G.parse('flowchart TD\n  A::b').error).toContain(':::');
+  });
+});

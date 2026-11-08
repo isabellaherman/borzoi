@@ -36,6 +36,7 @@ def free_step(code: U32, word: String, acc: List<&2, Token>, +line: Nat) -> Lexe
     case 37: Lexer{8, "", push_word(word, line, acc), line, ""}
     case 91: Lexer{1, "", push_word(word, line, acc), line, ""}
     case 124: Lexer{3, "", push_word(word, line, acc), line, ""}
+    case 58: Lexer{9, "", push_word(word, line, acc), line, ""}
     case 10: Lexer{0, "", Token{4, "", line} <> push_word(word, line, acc), 1n+line, ""}
     case 59: Lexer{0, "", Token{4, "", line} <> push_word(word, line, acc), line, ""}
     case 32: Lexer{0, "", push_word(word, line, acc), line, ""}
@@ -74,6 +75,20 @@ def edge_label_step(code: U32, word: String, acc: List<&2, Token>, +line: Nat) -
     case 10: lexer_error(line, "Close the connection label with |.")
     case c: Lexer{3, SCon{Chr{c}, word}, acc, line, ""}
 
+# A class after a node, Mermaid's `A:::name`: the name is a Token{6}; the character that ends it is read as usual.
+def class_end(code: U32, word: String, acc: List<&2, Token>, +line: Nat) -> Lexer:
+  match word:
+    case SNil{}: lexer_error(line, "Write a class name after :::.")
+    case SCon{h, t}: free_step(code, "", Token{6, String.reverse(SCon{h, t}), line} <> acc, line)
+
+def class_step.go(more: Bool, +code: U32, word: String, acc: List<&2, Token>, +line: Nat) -> Lexer:
+  match more:
+    case True{}: Lexer{11, SCon{Chr{code}, word}, acc, line, ""}
+    case False{}: class_end(code, word, acc, line)
+
+def class_step(+code: U32, word: String, acc: List<&2, Token>, +line: Nat) -> Lexer:
+  class_step.go(Char.is_alpha(Chr{code}) || Char.is_digit(Chr{code}) || U32.is_eq(code, 95), code, word, acc, line)
+
 def step(mode: U32, +code: U32, word: String, +acc: List<&2, Token>, +line: Nat) -> Lexer:
   match mode:
     case 0: free_step(code, word, acc, line)
@@ -89,6 +104,11 @@ def step(mode: U32, +code: U32, word: String, +acc: List<&2, Token>, +line: Nat)
       Bool.pick(Lexer, U32.is_eq(code, 62), Lexer{0, "", Token{2, "", line} <> acc, line, ""}, lexer_error(line, "Use --> for a directed connection."))
     case 8:
       Bool.pick(Lexer, U32.is_eq(code, 37), Lexer{5, "", acc, line, ""}, lexer_error(line, "Comments begin with %% ."))
+    case 9:
+      Bool.pick(Lexer, U32.is_eq(code, 58), Lexer{10, "", acc, line, ""}, lexer_error(line, "Use ::: before a class name."))
+    case 10:
+      Bool.pick(Lexer, U32.is_eq(code, 58), Lexer{11, "", acc, line, ""}, lexer_error(line, "Use ::: before a class name."))
+    case 11: class_step(code, word, acc, line)
     case _: lexer_error(line, "Unknown lexer state.")
 
 def scan(s: String, state: Lexer) -> Lexer:
@@ -102,6 +122,10 @@ def finish(state: Lexer) -> Lexed:
   match state:
     case Lexer{0, word, acc, +line, SNil{}}: Lexed{reverse_tokens(push_word(word, line, acc), Nil{}), "", line}
     case Lexer{5, word, acc, line, SNil{}}: Lexed{reverse_tokens(acc, Nil{}), "", line}
+    case Lexer{9, word, acc, line, SNil{}}: Lexed{Nil{}, "Write a class name after :::.", line}
+    case Lexer{10, word, acc, line, SNil{}}: Lexed{Nil{}, "Write a class name after :::.", line}
+    case Lexer{11, SNil{}, acc, line, SNil{}}: Lexed{Nil{}, "Write a class name after :::.", line}
+    case Lexer{11, SCon{h, t}, acc, +line, SNil{}}: Lexed{reverse_tokens(Token{6, String.reverse(SCon{h, t}), line} <> acc, Nil{}), "", line}
     case Lexer{mode, word, acc, line, SNil{}}: Lexed{Nil{}, "Unclosed label or incomplete connection.", line}
     case Lexer{mode, word, acc, line, SCon{h, t}}: Lexed{Nil{}, SCon{h, t}, line}
 
@@ -152,6 +176,8 @@ def parse_tokens(ts: List<&2, Token>, phase: U32, +previous: String, edge_label:
       parse_tokens(t, 1, id, "", add_node(nodes, id, id, False{}), edges)
     case Token{1, label, l} <> t 1:
       parse_tokens(t, 4, previous, "", add_node(nodes, previous, label, True{}), edges)
+    case Token{6, w, l} <> t 1: parse_tokens(t, 1, previous, "", nodes, edges)
+    case Token{6, w, l} <> t 4: parse_tokens(t, 4, previous, "", nodes, edges)
     case Token{2, w, l} <> t 1: parse_tokens(t, 2, previous, "", nodes, edges)
     case Token{2, w, l} <> t 4: parse_tokens(t, 2, previous, "", nodes, edges)
     case Token{3, label, l} <> t 2: parse_tokens(t, 3, previous, label, nodes, edges)
@@ -179,8 +205,40 @@ def parse_lexed(result: Lexed) -> Graph:
     case Lexed{tokens, SNil{}, l}: header(tokens)
     case Lexed{tokens, SCon{h, t}, l}: Graph{Nil{}, Nil{}, SCon{h, t}, l}
 
+# `classDef name …` lines say how a class looks; the diagram's shape doesn't depend on them, so they are read
+# like comments (the line stays, so line numbers in messages stay right).
+def without_class_definition(+line: String) -> String:
+  Bool.pick(String, String.starts_with(String.trim(line), "classDef ") || String.eq(String.trim(line), "classDef"), "", line)
+
+def without_class_definitions(ls: List<&2, String>) -> List<&2, String>:
+  match ls:
+    case Nil{}: Nil{}
+    case +l <> t: without_class_definition(l) <> without_class_definitions(t)
+
+def readable(source: String) -> String:
+  String.join(without_class_definitions(String.lines(source)), "\n")
+
 def parse(source: String) -> Graph:
-  parse_lexed(lex(source))
+  parse_lexed(lex(readable(source)))
+
+# ---------- Classes: which node has which class (`A:::name`), in order ----------
+
+type Class is Data:
+  Class{id: String, name: String}
+
+def classes.go(ts: List<&2, Token>, +last: String) -> List<&2, Class>:
+  match ts:
+    case Nil{}: Nil{}
+    case Token{0, +w, l} <> t: classes.go(t, w)
+    case Token{6, w, l} <> t: Class{last, w} <> classes.go(t, last)
+    case Token{k, w, l} <> t: classes.go(t, last)
+
+def classes.lexed(x: Lexed) -> List<&2, Class>:
+  match x:
+    case Lexed{ts, error, l}: classes.go(ts, "")
+
+def classes(source: String) -> List<&2, Class>:
+  classes.lexed(lex(readable(source)))
 
 def is_valid(g: Graph) -> Bool:
   match g:

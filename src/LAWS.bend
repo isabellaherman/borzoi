@@ -204,3 +204,28 @@ law auto_keeps_positions:
 # REGRESSION: other tools read the same diagram: the layout lines are comments.
 law layout_lines_are_comments:
   {G.parse("flowchart TD\n  A --> B\n  %% borzoi manual\n  %% borzoi A 30 5") == G.parse("flowchart TD\n  A --> B") : P.Graph}
+
+# ---------- Colors: the lib's tones as Mermaid classes ----------
+
+# REGRESSION: `A:::draft` gives A the draft tone; a class that isn't one of the four tones is no color.
+law class_gives_a_tone:
+  {G.tones("flowchart TD\n  A[Idea]:::draft --> B\n  C:::fancy") == [G.Tone{"A", "draft"}] : List<&2, G.Tone>}
+
+# REGRESSION: classes and classDef lines don't change the diagram's shape.
+law classes_keep_the_shape:
+  {G.parse("flowchart TD\n  A:::draft --> B\n  classDef draft fill:#fff") == G.parse("flowchart TD\n  A --> B") : P.Graph}
+
+# REGRESSION: coloring a node writes its class and, once, the tone's classDef with the lib's colors.
+law color_writes_class_and_definition:
+  {E.set_tone("flowchart TD\n  A --> B", "B", "law") == "flowchart TD\n  A --> B\n  B:::law\n  classDef law fill:#ebf6ed,stroke:#2b8a3e" : String}
+
+# REGRESSION: a new color replaces the old one, and the definition nobody uses any more goes.
+law color_replaces_color:
+  {E.set_tone(E.set_tone("flowchart TD\n  A --> B", "B", "law"), "B", "draft") == "flowchart TD\n  A --> B\n  B:::draft\n  classDef draft fill:#fbf3e4,stroke:#b7791f" : String}
+
+law no_color_removes_it:
+  {E.set_tone("flowchart TD\n  A --> B\n  B:::law\n  classDef law fill:#ebf6ed,stroke:#2b8a3e", "B", "") == "flowchart TD\n  A --> B" : String}
+
+# REGRESSION: rewriting a line for another edit keeps the classes on it.
+law rename_keeps_the_color:
+  {E.rename("flowchart TD\n  A[Idea]:::accent --> B", "A", "Plan") == "flowchart TD\n  A[\"Plan\"] --> B\n  A:::accent" : String}

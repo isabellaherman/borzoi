@@ -2,6 +2,7 @@
 import Base
 import ./Parser.bend as P
 import ../vendor/bend-ui/DIAGRAM.bend as D
+import ../vendor/bend-ui/TOKENS.bend as T
 
 def count_nodes(ns: List<&2, P.Node>) -> Nat:
   match ns:
@@ -195,3 +196,33 @@ def graph_has_edge(g: P.Graph, +from: String, +to: String) -> Bool:
 # and the source stays valid with it (no loop, within the size limits).
 def can_connect(+source: String, +from: String, +to: String) -> Bool:
   P.is_valid(parse(source)) && Bool.not(String.eq(from, to)) && Bool.not(graph_has_edge(parse(source), from, to)) && P.is_valid(parse(connect(source, from, to)))
+
+# ---------- Colors: the lib's four tones, written as Mermaid classes (`A:::draft`) ----------
+
+def tone_name(+name: String) -> String:
+  Bool.pick(String, String.eq(name, "accent") || String.eq(name, "law") || String.eq(name, "draft") || String.eq(name, "conflict"), name, "")
+
+type Tone is Data:
+  Tone{id: String, tone: String}
+
+def tones.keep(+tone: String, id: String, +rest: List<&2, Tone>) -> List<&2, Tone>:
+  Bool.pick(List<&2, Tone>, String.is_empty(tone), rest, Tone{id, tone} <> rest)
+
+def tones.go(cs: List<&2, P.Class>) -> List<&2, Tone>:
+  match cs:
+    case Nil{}: Nil{}
+    case P.Class{id, +name} <> t: tones.keep(tone_name(name), id, tones.go(t))
+
+# Every node's tone class, in order; the last one a node gets is its color.
+def tones(source: String) -> List<&2, Tone>:
+  tones.go(P.classes(source))
+
+def tone_soft(+tone: String) -> String:
+  Bool.pick(String, String.eq(tone, "accent"), T.color_accent_soft(), Bool.pick(String, String.eq(tone, "law"), T.color_law_soft(), Bool.pick(String, String.eq(tone, "draft"), T.color_draft_soft(), T.color_conflict_soft())))
+
+def tone_strong(+tone: String) -> String:
+  Bool.pick(String, String.eq(tone, "accent"), T.color_accent(), Bool.pick(String, String.eq(tone, "law"), T.color_law(), Bool.pick(String, String.eq(tone, "draft"), T.color_draft(), T.color_conflict())))
+
+# How the class looks in other Mermaid tools: the lib's own colors, from TOKENS.bend.
+def tone_style(+tone: String) -> String:
+  "fill:" ++ tone_soft(tone) ++ ",stroke:" ++ tone_strong(tone)

@@ -131,19 +131,34 @@ def append(xs: List<&2, String>, ys: List<&2, String>) -> List<&2, String>:
     case Nil{}: ys
     case x <> t: x <> append(t, ys)
 
-def emit.go(+indent: String, e: Emitted, ns: List<&2, P.Node>, +es: List<&2, P.Edge>, +all: List<&2, String>) -> String:
+# The classes the line gave its nodes are written back as `id:::name`, for the nodes still on it.
+def class_statements(cs: List<&2, P.Class>, +ns: List<&2, P.Node>) -> List<&2, String>:
+  match cs:
+    case Nil{}: Nil{}
+    case P.Class{+id, +name} <> t: node_statements.keep(P.has_node(ns, id), id ++ ":::" ++ name, class_statements(t, ns))
+
+def emit.go(+indent: String, e: Emitted, +ns: List<&2, P.Node>, +es: List<&2, P.Edge>, +all: List<&2, String>, cs: List<&2, P.Class>) -> String:
   match e:
-    case Emitted{lines, +used}: indent ++ String.join(append(lines, node_statements(ns, es, all, used)), "\n" ++ indent)
+    case Emitted{lines, +used}: indent ++ String.join(append(append(lines, node_statements(ns, es, all, used)), class_statements(cs, ns)), "\n" ++ indent)
 
-def emit(+indent: String, +ns: List<&2, P.Node>, +es: List<&2, P.Edge>, +all: List<&2, String>) -> String:
-  emit.go(indent, edge_statements(es, ns, Nil{}), ns, es, all)
+def emit(+indent: String, +ns: List<&2, P.Node>, +es: List<&2, P.Edge>, +all: List<&2, String>, cs: List<&2, P.Class>) -> String:
+  emit.go(indent, edge_statements(es, ns, Nil{}), ns, es, all, cs)
 
-def without_node_line.go(+indent: String, g: P.Graph, +id: String, +all: List<&2, String>) -> String:
+def drop_classes_of.keep(drop: Bool, +c: P.Class, +rest: List<&2, P.Class>) -> List<&2, P.Class>:
+  Bool.pick(List<&2, P.Class>, drop, rest, c <> rest)
+
+def drop_classes_of(cs: List<&2, P.Class>, +id: String, +tones_only: Bool) -> List<&2, P.Class>:
+  match cs:
+    case Nil{}: Nil{}
+    case P.Class{+n, +name} <> t:
+      drop_classes_of.keep(String.eq(n, id) && (Bool.not(tones_only) || Bool.not(String.is_empty(G.tone_name(name)))), P.Class{n, name}, drop_classes_of(t, id, tones_only))
+
+def without_node_line.go(+indent: String, g: P.Graph, +id: String, +all: List<&2, String>, cs: List<&2, P.Class>) -> String:
   match g:
-    case P.Graph{ns, +es, error, l}: emit(indent, drop_node(ns, id), drop_touching(es, id), all)
+    case P.Graph{ns, +es, error, l}: emit(indent, drop_node(ns, id), drop_touching(es, id), all, cs)
 
 def without_node_line(+line: String, +id: String, +all: List<&2, String>) -> String:
-  without_node_line.go(indent_of(line), line_graph(line), id, all)
+  without_node_line.go(indent_of(line), line_graph(line), id, all, drop_classes_of(P.classes(line), id, False{}))
 
 def is_place_of(+line: String, +id: String) -> Bool:
   String.starts_with(String.trim(line), "%% borzoi " ++ id ++ " ")
@@ -167,12 +182,12 @@ def drop_edge(es: List<&2, P.Edge>, +from: String, +to: String) -> List<&2, P.Ed
     case P.Edge{+f, +t, +label} <> rest:
       drop_edge.keep(String.eq(f, from) && String.eq(t, to), P.Edge{f, t, label}, drop_edge(rest, from, to))
 
-def without_edge_line.go(+indent: String, g: P.Graph, +from: String, +to: String, +all: List<&2, String>) -> String:
+def without_edge_line.go(+indent: String, g: P.Graph, +from: String, +to: String, +all: List<&2, String>, cs: List<&2, P.Class>) -> String:
   match g:
-    case P.Graph{ns, es, error, l}: emit(indent, ns, drop_edge(es, from, to), all)
+    case P.Graph{ns, es, error, l}: emit(indent, ns, drop_edge(es, from, to), all, cs)
 
 def without_edge_line(+line: String, +from: String, +to: String, +all: List<&2, String>) -> String:
-  without_edge_line.go(indent_of(line), line_graph(line), from, to, all)
+  without_edge_line.go(indent_of(line), line_graph(line), from, to, all, P.classes(line))
 
 def without_edge.keep(mentioned: Bool, +l: String, +rewritten: String, +rest: List<&2, String>) -> List<&2, String>:
   Bool.pick(List<&2, String>, mentioned, keep_unless_empty(rewritten, rest), l <> rest)
@@ -206,12 +221,12 @@ def any_labels(ls: List<&2, String>, +id: String) -> Bool:
     case Nil{}: False{}
     case +l <> t: labels_node(l, id) || any_labels(t, id)
 
-def relabel_line.go(+indent: String, g: P.Graph, +id: String, +label: String, +all: List<&2, String>) -> String:
+def relabel_line.go(+indent: String, g: P.Graph, +id: String, +label: String, +all: List<&2, String>, cs: List<&2, P.Class>) -> String:
   match g:
-    case P.Graph{ns, +es, error, l}: emit(indent, relabel(ns, id, label), es, all)
+    case P.Graph{ns, +es, error, l}: emit(indent, relabel(ns, id, label), es, all, cs)
 
 def relabel_line(+line: String, +id: String, +label: String, +all: List<&2, String>) -> String:
-  relabel_line.go(indent_of(line), line_graph(line), id, label, all)
+  relabel_line.go(indent_of(line), line_graph(line), id, label, all, P.classes(line))
 
 def relabel_lines(ls: List<&2, String>, +id: String, +label: String, +all: List<&2, String>) -> List<&2, String>:
   match ls:
@@ -352,3 +367,59 @@ def insert_between.go(+source: String, +from: String, +to: String, +label: Strin
 
 def insert_between(+source: String, +from: String, +to: String, +label: String) -> String:
   insert_between.go(source, from, to, label, G.readable_id(source, label), edge_label(edges_of(G.parse(source)), from, to))
+
+# ---------- Color a node: its tone classes go, `id:::tone` is written at the end, with its classDef once ----------
+
+def has_tone_of(cs: List<&2, P.Class>, +id: String) -> Bool:
+  match cs:
+    case Nil{}: False{}
+    case P.Class{+n, +name} <> t: (String.eq(n, id) && Bool.not(String.is_empty(G.tone_name(name)))) || has_tone_of(t, id)
+
+def without_tone_line.go(+indent: String, g: P.Graph, +all: List<&2, String>, cs: List<&2, P.Class>) -> String:
+  match g:
+    case P.Graph{+ns, +es, error, l}: emit(indent, ns, es, all, cs)
+
+def without_tone_line(+line: String, +id: String, +all: List<&2, String>) -> String:
+  without_tone_line.go(indent_of(line), line_graph(line), all, drop_classes_of(P.classes(line), id, True{}))
+
+def without_tone(ls: List<&2, String>, +id: String, +all: List<&2, String>) -> List<&2, String>:
+  match ls:
+    case Nil{}: Nil{}
+    case +l <> t: without_edge.keep(has_tone_of(P.classes(l), id), l, without_tone_line(l, id, all), without_tone(t, id, all))
+
+def has_definition(ls: List<&2, String>, +tone: String) -> Bool:
+  match ls:
+    case Nil{}: False{}
+    case +l <> t: String.starts_with(String.trim(l), "classDef " ++ tone ++ " ") || has_definition(t, tone)
+
+def with_definition(+source: String, +tone: String) -> String:
+  Bool.pick(String, has_definition(lines_of(source), tone), source, G.write_line(source, "classDef " ++ tone ++ " " ++ G.tone_style(tone)))
+
+# A classDef for one of the four tones goes away once no node uses that tone.
+def uses(cs: List<&2, P.Class>, +name: String) -> Bool:
+  match cs:
+    case Nil{}: False{}
+    case P.Class{id, n} <> t: String.eq(n, name) || uses(t, name)
+
+def definition_tone(ws: List<&2, String>) -> String:
+  match ws:
+    case +k <> +name <> rest: Bool.pick(String, String.eq(k, "classDef"), G.tone_name(name), "")
+    case _: ""
+
+def unused_definition(+line: String, +cs: List<&2, P.Class>) -> Bool:
+  Bool.not(String.is_empty(definition_tone(words(line)))) && Bool.not(uses(cs, definition_tone(words(line))))
+
+def prune(ls: List<&2, String>, +cs: List<&2, P.Class>) -> List<&2, String>:
+  match ls:
+    case Nil{}: Nil{}
+    case +l <> t: without_manual.keep(unused_definition(l, cs), l, prune(t, cs))
+
+def pruned(+source: String) -> String:
+  text_of(prune(lines_of(source), P.classes(source)))
+
+def set_tone.go(+clean: String, +id: String, +tone: String) -> String:
+  pruned(Bool.pick(String, String.is_empty(G.tone_name(tone)), clean, with_definition(G.write_line(clean, id ++ ":::" ++ tone), tone)))
+
+# A tone that isn't one of the four (e.g. "") just removes the node's color.
+def set_tone(+source: String, +id: String, +tone: String) -> String:
+  set_tone.go(text_of(without_tone(lines_of(source), id, lines_of(source))), id, tone)
