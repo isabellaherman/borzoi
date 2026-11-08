@@ -29,20 +29,16 @@
       </header>
       <div class="toolbar" role="toolbar" aria-label="Diagram">
         <div class="segmented" id="mode" data-manual aria-label="Diagram mode"><button class="btn btn--ghost btn--sm" data-mode="view" aria-pressed="false">View</button><button class="btn btn--ghost btn--sm" data-mode="edit" aria-pressed="true">Edit</button></div>
-        <span class="toolbar__spacer"></span><button class="btn btn--ghost btn--sm" id="checkpoint">Save version</button><button class="btn btn--ghost btn--sm" id="export">Export .mmd</button>
+        <span class="toolbar__spacer"></span><span class="detail status-text hide-narrow" id="graph-stats"></span><button class="btn btn--ghost btn--sm" id="fit">Center</button><span class="toolbar__sep"></span><button class="btn btn--ghost btn--sm" id="checkpoint">Save version</button><button class="btn btn--ghost btn--sm" id="export">Export .mmd</button>
       </div>
-      <main class="page"><div class="workbench">
+      <main class="page" id="canvas-scroll" aria-label="Diagram"><div class="workbench">
         <div id="notice" hidden></div>
-        <section class="workbench__panes" aria-label="Diagram workspace">
-          <section id="editor-panel" class="panel workbench__pane" aria-label="Source editor">
-            <header class="panel__header"><span class="item-title">Source</span><button class="btn btn--ghost btn--sm" id="syntax-help">Syntax guide</button></header>
-            <div class="source-editor"><label class="field source-editor__field" for="source"><span class="field__label">Diagram source</span><textarea id="source" class="input input--mono" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea></label><p id="parse-message" class="detail status-text" aria-live="polite"></p></div>
-          </section>
-          <section class="panel workbench__pane preview" aria-label="Diagram preview">
-            <header class="panel__header"><span class="detail status-text" id="graph-stats"></span><button class="btn btn--ghost btn--sm" id="fit">Center</button></header><div class="preview__viewport" id="canvas-scroll"><div class="preview__content"><div id="diagram"></div></div></div>
-          </section>
-        </section>
+        <div id="diagram"></div>
       </div></main>
+      <section id="editor-panel" class="panel window__dock" aria-label="Source editor">
+        <header class="panel__header"><span class="item-title">Source</span><button class="btn btn--ghost btn--sm" id="syntax-help">Syntax guide</button></header>
+        <div class="source-editor"><label class="field source-editor__field" for="source"><span class="field__label">Diagram source</span><textarea id="source" class="input input--mono" cols="40" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea></label><p id="parse-message" class="detail status-text" aria-live="polite"></p></div>
+      </section>
       <p class="detail window__foot"><a class="link" href="https://github.com/isabellaherman/Bend-UI" target="_blank" rel="noopener noreferrer">Made with Bend-UI</a></p>
       <p class="detail window__foot window__foot--end" id="app-version"></p>
     </div>
