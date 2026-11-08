@@ -87,7 +87,7 @@ function renderGraph(){
 function render(){
   const d=doc(),p=project(),title=d?.name??'New diagram';
   renderNavigation();$('#project-name').textContent=p?.name??'';$('#project-separator').hidden=!p;
-  $('#diagram-title').textContent=title;$('#diagram-crumb').textContent=title;ui.source.value=d?.source??'';ui.source.disabled=locked;$('#editor-panel').hidden=workspace.mode===0;
+  $('#diagram-crumb').textContent=title;ui.source.value=d?.source??'';ui.source.disabled=locked;$('#editor-panel').hidden=workspace.mode===0;
   for(const id of ['rename-diagram','export','checkpoint'])$('#'+id).disabled=!d||locked;
   document.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed',Number(b.dataset.mode==='edit')===workspace.mode));renderGraph();document.title='Borzoi — Diagrams';
 }
