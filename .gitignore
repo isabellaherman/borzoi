@@ -4,3 +4,8 @@ dist/
 node_modules/
 *.zip
 .openai/sites.local.json
+.repair/
+
+# Local hosting metadata and visual review captures
+.openai/
+design/

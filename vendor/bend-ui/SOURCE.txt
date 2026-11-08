@@ -1,2 +1,4 @@
-Unmodified Bend-UI 1.0.3 snapshot from /Users/isabellaherman/Documents/HOC/Bend-UI.
-Bundled for reproducible, self-contained static deployment.
+Bend UI 1.0.4 copied from the Bend-UI working tree.
+Local working tree awaiting owner review; not a published release.
+SOURCE.lock.json records exact upstream bytes; never edit this snapshot directly.
+Run bun scripts/sync-bend-ui.mjs after editing and checking the real library.

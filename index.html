@@ -3,32 +3,49 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#fafafa">
-  <meta name="description" content="A quiet workspace for diagrams, research, and ideas. Built with Bend.">
+  <meta name="description" content="A workspace for diagrams, research, and ideas. Built with Bend.">
   <title>Borzoi — Diagrams</title>
   <script type="module" src="./src/main.js"></script>
 </head>
-<body>
-  <div class="window is-full app">
+<body class="desk">
+  <div class="window is-full" id="app">
     <aside class="side is-open" id="sidebar" aria-label="Projects">
-      <div class="brand"><span class="brand-symbol" aria-hidden="true">B</span><div><strong class="item-title">Borzoi</strong><div class="detail">Room for thought.</div></div></div>
+      <div class="side__head"><span class="side__label item-title side__text">Borzoi</span></div>
       <div class="side__body" id="project-list"></div>
-      <div class="side-bottom"><button class="btn btn--ghost" id="new-project"><span aria-hidden="true">＋</span> New project</button><div class="separator"></div><button class="btn btn--ghost" id="backup">Download backup</button><button class="btn btn--ghost" id="import">Import backup</button><p class="detail">Saved on this device.<br>Your ideas stay with you.</p></div>
+      <div class="side__footer">
+        <button class="btn btn--ghost" id="new-project" title="New project"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg><span class="side__text">New project</span></button>
+        <div class="separator"></div>
+        <button class="btn btn--ghost" id="backup" title="Download backup"><svg class="icon" aria-hidden="true"><use href="#i-file-text"/></svg><span class="side__text">Download backup</span></button>
+        <button class="btn btn--ghost" id="import" title="Import backup"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg><span class="side__text">Import backup</span></button>
+        <p class="detail side__text side__caption">Saved on this device.</p>
+      </div>
     </aside>
     <div class="window__main">
-      <header class="toolbar app-toolbar"><button class="btn btn--ghost btn--icon" id="menu" aria-label="Toggle projects"><svg class="icon"><use href="#i-panel-left"/></svg></button><div class="breadcrumbs"><span id="project-name" class="detail"></span><span class="detail">/</span><span id="diagram-crumb" class="item-title"></span></div><span class="toolbar-spacer"></span><span id="save-status" class="detail" role="status">Saved locally</span><button class="btn btn--ghost btn--sm" id="history">History</button></header>
-      <main class="workspace">
-        <header class="document-head"><div><div class="eyebrow detail">DIAGRAM WORKSPACE</div><button id="rename-diagram" class="title-button" title="Rename diagram"><h1 id="diagram-title" class="heading"></h1></button><p class="detail" id="document-description">A little structure for your next idea.</p></div><div class="document-actions"><div class="segmented" id="mode" data-manual aria-label="Diagram mode"><button class="btn btn--ghost btn--sm" data-mode="view" aria-pressed="true">View</button><button class="btn btn--ghost btn--sm" data-mode="edit" aria-pressed="false">Edit</button></div><button class="btn btn--ghost btn--sm" id="export">Export .mmd</button></div></header>
-        <div id="notice" class="notice detail" role="status" hidden></div>
-        <section class="work-area" aria-label="Diagram workspace">
-          <section id="editor-panel" class="editor-panel" hidden aria-label="Source editor"><div class="panel-heading"><span class="item-title">Source</span><button class="btn btn--ghost btn--sm" id="syntax-help">Syntax guide</button></div><label class="sr-only" for="source">Diagram source</label><textarea id="source" class="input input--mono" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea><p id="parse-message" class="detail" aria-live="polite"></p><div class="editor-actions"><button class="btn btn--primary btn--sm" id="checkpoint">Save version</button><span class="detail">Drafts save automatically.</span></div></section>
-          <section class="canvas-panel" aria-label="Diagram preview"><div class="canvas-caption"><span class="detail" id="graph-stats"></span><span class="tag">Bend</span></div><div class="canvas-scroll" id="canvas-scroll"><div id="diagram" class="diagram--soft"></div></div><footer class="canvas-footer"><span class="detail" id="graph-caption">Start with a question. Follow the connections.</span><button class="btn btn--ghost btn--sm" id="fit">Center</button></footer></section>
+      <header class="toolbar">
+        <button class="btn btn--ghost btn--icon" id="menu" aria-label="Toggle projects" aria-controls="sidebar"><svg class="icon" aria-hidden="true"><use href="#i-panel-left"/></svg></button>
+        <nav class="breadcrumbs" aria-label="Current diagram"><span id="project-name" class="detail breadcrumbs__item"></span><span class="detail">/</span><span id="diagram-crumb" class="item-title breadcrumbs__item"></span></nav>
+        <span class="toolbar__spacer"></span><span id="save-status" class="detail status-text hide-narrow" role="status">Saved locally</span><button class="btn btn--ghost btn--sm" id="history">History</button>
+      </header>
+      <main class="page"><div class="workbench">
+        <header class="workbench__header">
+          <div class="workbench__title"><h1 id="diagram-title" class="section-title"></h1><p class="detail">Diagram workspace</p></div>
+          <div class="workbench__actions"><button id="rename-diagram" class="btn btn--ghost btn--sm">Rename</button><div class="segmented" id="mode" data-manual aria-label="Diagram mode"><button class="btn btn--ghost btn--sm" data-mode="view" aria-pressed="true">View</button><button class="btn btn--ghost btn--sm" data-mode="edit" aria-pressed="false">Edit</button></div><button class="btn btn--ghost btn--sm" id="export">Export .mmd</button></div>
+        </header>
+        <div id="notice" hidden></div>
+        <section class="workbench__panes" aria-label="Diagram workspace">
+          <section id="editor-panel" class="panel workbench__pane" hidden aria-label="Source editor">
+            <header class="panel__header"><span class="item-title">Source</span><button class="btn btn--ghost btn--sm" id="syntax-help">Syntax guide</button></header>
+            <div class="source-editor"><label class="field source-editor__field" for="source"><span class="field__label">Diagram source</span><textarea id="source" class="input input--mono" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea></label><p id="parse-message" class="detail status-text" aria-live="polite"></p><div class="workbench__actions"><button class="btn btn--primary btn--sm" id="checkpoint">Save version</button><span class="detail">Drafts save automatically.</span></div></div>
+          </section>
+          <section class="panel workbench__pane preview" aria-label="Diagram preview">
+            <header class="panel__header"><span class="detail" id="graph-stats"></span><span class="tag">Bend</span></header><div class="preview__viewport" id="canvas-scroll"><div class="preview__content"><div id="diagram"></div></div></div><footer class="preview__footer"><span class="detail" id="graph-caption">Start with a question. Follow the connections.</span><button class="btn btn--ghost btn--sm" id="fit">Center</button></footer>
+          </section>
         </section>
-        <footer class="workspace-footer"><span class="detail">Built with Bend. Made for thinking.</span><span class="detail">Borzoi · 0.1</span></footer>
-      </main>
+        <footer class="workbench__footer"><span class="detail">Built with Bend. Made for thinking.</span><span class="detail">Borzoi · 0.1</span></footer>
+      </div></main>
     </div>
   </div>
-  <dialog id="modal" aria-labelledby="modal-title"><div class="modal-body"><div class="panel-heading"><h2 id="modal-title" class="section-title"></h2><button class="btn btn--ghost btn--sm" id="close-modal" aria-label="Close dialog">Close</button></div><div id="modal-content"></div></div></dialog>
+  <dialog id="modal" class="dialog"><header class="dialog__header"><h2 id="modal-title" class="section-title"></h2><button class="btn btn--ghost btn--sm" id="close-modal" aria-label="Close dialog">Close</button></header><div id="modal-content" class="dialog__body"></div></dialog>
   <input type="file" id="import-file" accept="application/json,.json,.borzoi" hidden>
 </body>
 </html>
