@@ -6,7 +6,7 @@
   <meta name="description" content="A simple tool for creating and editing diagrams.">
   <title>Borzoi — Diagrams</title>
 
-<link rel="stylesheet" crossorigin href="./chunk-sa5je8nt.css"><script type="module" crossorigin src="./chunk-rvz6hc58.js"></script></head>
+<link rel="stylesheet" crossorigin href="./chunk-sa5je8nt.css"><script type="module" crossorigin src="./chunk-j5gftzqw.js"></script></head>
 <body class="desk">
   <div class="window is-full" id="app">
     <aside class="side is-open" id="sidebar" aria-label="Projects">
@@ -23,26 +23,24 @@
     <div class="window__main">
       <header class="toolbar">
         <button class="btn btn--ghost btn--icon" id="menu" aria-label="Toggle projects" aria-controls="sidebar"><svg class="icon" aria-hidden="true"><use href="#i-panel-left"/></svg></button>
-        <nav class="breadcrumbs" aria-label="Current diagram"><span id="project-name" class="detail breadcrumbs__item"></span><span class="detail" id="project-separator">/</span><span id="diagram-crumb" class="item-title breadcrumbs__item"></span></nav>
+        <nav class="breadcrumbs" aria-label="Current diagram"><span id="project-name" class="detail breadcrumbs__item"></span><span class="detail" id="project-separator">/</span><h1 id="diagram-crumb" class="item-title breadcrumbs__item"></h1></nav>
+        <button id="rename-diagram" class="btn btn--ghost btn--sm">Rename</button>
         <span class="toolbar__spacer"></span><span id="save-status" class="detail status-text hide-narrow" role="status">Saved locally</span><button class="btn btn--ghost btn--sm" id="history">History</button>
       </header>
-      <main class="page"><div class="workbench">
-        <header class="workbench__header">
-          <div class="workbench__title"><h1 id="diagram-title" class="section-title"></h1><p class="detail">Diagram workspace</p></div>
-          <div class="workbench__actions"><button id="rename-diagram" class="btn btn--ghost btn--sm">Rename</button><div class="segmented" id="mode" data-manual aria-label="Diagram mode"><button class="btn btn--ghost btn--sm" data-mode="view" aria-pressed="false">View</button><button class="btn btn--ghost btn--sm" data-mode="edit" aria-pressed="true">Edit</button></div><button class="btn btn--ghost btn--sm" id="export">Export .mmd</button></div>
-        </header>
+      <div class="toolbar" role="toolbar" aria-label="Diagram">
+        <div class="segmented" id="mode" data-manual aria-label="Diagram mode"><button class="btn btn--ghost btn--sm" data-mode="view" aria-pressed="false">View</button><button class="btn btn--ghost btn--sm" data-mode="edit" aria-pressed="true">Edit</button></div>
+        <span class="toolbar__spacer"></span><span class="detail status-text hide-narrow" id="graph-stats"></span><button class="btn btn--ghost btn--sm" id="fit">Center</button><span class="toolbar__sep"></span><button class="btn btn--ghost btn--sm" id="checkpoint">Save version</button><button class="btn btn--ghost btn--sm" id="export">Export .mmd</button>
+      </div>
+      <main class="page" id="canvas-scroll" aria-label="Diagram"><div class="workbench">
         <div id="notice" hidden></div>
-        <section class="workbench__panes" aria-label="Diagram workspace">
-          <section id="editor-panel" class="panel workbench__pane" aria-label="Source editor">
-            <header class="panel__header"><span class="item-title">Source</span><button class="btn btn--ghost btn--sm" id="syntax-help">Syntax guide</button></header>
-            <div class="source-editor"><label class="field source-editor__field" for="source"><span class="field__label">Diagram source</span><textarea id="source" class="input input--mono" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea></label><p id="parse-message" class="detail status-text" aria-live="polite"></p><div class="workbench__actions"><button class="btn btn--primary btn--sm" id="checkpoint">Save version</button><span class="detail">Drafts save automatically.</span></div></div>
-          </section>
-          <section class="panel workbench__pane preview" aria-label="Diagram preview">
-            <header class="panel__header"><span class="detail" id="graph-stats"></span><span class="tag">Bend</span></header><div class="preview__viewport" id="canvas-scroll"><div class="preview__content"><div id="diagram"></div></div></div><footer class="preview__footer"><span class="detail" id="graph-caption">Start with a question. Follow the connections.</span><button class="btn btn--ghost btn--sm" id="fit">Center</button></footer>
-          </section>
-        </section>
-        <footer class="workbench__footer"><a class="detail link" href="https://github.com/isabellaherman/Bend-UI" target="_blank" rel="noopener noreferrer">Made with Bend-UI</a><span class="detail" id="app-version"></span></footer>
+        <div id="diagram"></div>
       </div></main>
+      <section id="editor-panel" class="panel window__dock" aria-label="Source editor">
+        <header class="panel__header"><span class="item-title">Source</span><button class="btn btn--ghost btn--sm" id="syntax-help">Syntax guide</button></header>
+        <div class="source-editor"><label class="field source-editor__field" for="source"><span class="field__label">Diagram source</span><textarea id="source" class="input input--mono" cols="40" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea></label><p id="parse-message" class="detail status-text" aria-live="polite"></p></div>
+      </section>
+      <p class="detail window__foot"><a class="link" href="https://github.com/isabellaherman/Bend-UI" target="_blank" rel="noopener noreferrer">Made with Bend-UI</a></p>
+      <p class="detail window__foot window__foot--end" id="app-version"></p>
     </div>
   </div>
   <dialog id="modal" class="dialog"><header class="dialog__header"><h2 id="modal-title" class="section-title"></h2><button class="btn btn--ghost btn--sm" id="close-modal" aria-label="Close dialog">Close</button></header><div id="modal-content" class="dialog__body"></div></dialog>
