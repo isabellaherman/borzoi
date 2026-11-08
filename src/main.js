@@ -80,24 +80,34 @@ function writeFromDiagram(next,{version=true}={}){
   const firstWrite=!doc();if(version)checkpoint();change(D.write_source(workspace,next),{navigation:firstWrite});
   ui.source.value=currentSource();if(!firstWrite)renderGraph();
 }
-// The lib's four tones, as the Mermaid classes Borzoi writes (`A:::draft`); '' removes the color.
-const COLORS=[['accent','Accent'],['law','Law'],['draft','Draft'],['conflict','Conflict'],['','None']];
+// Colors by their common name, as the Mermaid classes Borzoi writes (`A:::green`); each is one of the lib's
+// tones (the second value, what the diagram receives). '' removes the color.
+const COLORS=[['blue','accent','Blue'],['green','success','Green'],['yellow','warning','Yellow'],['red','danger','Red'],['','','None']];
 const isManual=()=>Boolean(doc())&&Boolean(E.is_manual(currentSource()));
 function placesOf(source){const out=new Map();for(const p of array(E.places(source)))out.set(p.id,{x:Number(p.x),y:Number(p.y)});return out;}
+// Dropdown menu items, written as Bend-UI's README writes them: an icon (or an empty one, to keep the text in line),
+// the text, and the check last for the current color. A group starts with the lib's separator.
+function menuIcon(name,cls='icon icon--sm'){const svg=icon(name,cls);if(!name)svg.replaceChildren();return svg;}
+function menuItem(label,iconName,onClick){const b=element('button','menu__item');b.type='button';b.setAttribute('role','menuitem');b.append(menuIcon(iconName),element('span','',label));b.addEventListener('click',onClick);return b;}
+function colorItem(name,tone,checked,onClick){
+  const b=element('button','menu__item'),text=element('span');b.type='button';b.setAttribute('role','menuitemradio');b.setAttribute('aria-checked',String(checked));
+  text.append(element('span',tone?`tag tag--${tone}`:'tag',name));b.append(menuIcon(''),text,menuIcon('check','icon icon--sm menu__check'));b.addEventListener('click',onClick);return b;
+}
+const group=items=>items.length?[element('hr','separator'),...items]:[];
 function diagramActions(data){
   const id=i=>data.ids[i],allowed=(a,b)=>!locked&&Boolean(G.can_connect(currentSource(),id(a),id(b)));
   const next=i=>[...new Set(data.edges.filter(e=>e.from===i).map(e=>e.to))];
   const actions={
     isValidConnection:({source:a,target:b})=>allowed(a,b),
     onConnect:({source:a,target:b})=>writeFromDiagram(G.connect(currentSource(),id(a),id(b))),
+    // The node opens the lib's Dropdown menu; its items are built as any Dropdown menu's (Bend-UI 1.0.10).
     nodeMenu:i=>locked?[]:[
-      {label:'Add node below',onSelect:()=>nameDialog('Add node below','',label=>writeFromDiagram(G.add_node_below(currentSource(),id(i),label)))},
-      ...next(i).map(j=>({label:`Add node between → ${data.nodes[j].label}`,onSelect:()=>nameDialog('Add node between','',label=>writeFromDiagram(E.insert_between(currentSource(),id(i),id(j),label)))})),
-      {label:'Rename',onSelect:()=>nameDialog('Rename node',data.nodes[i].label,label=>writeFromDiagram(E.rename(currentSource(),id(i),label)))},
-      ...data.nodes.map((n,j)=>allowed(i,j)?{label:`Connect to ${n.label}`,onSelect:()=>writeFromDiagram(G.connect(currentSource(),id(i),id(j)))}:null).filter(Boolean),
-      ...next(i).map(j=>({label:`Remove arrow → ${data.nodes[j].label}`,onSelect:()=>writeFromDiagram(E.remove_edge(currentSource(),id(i),id(j)))})),
-      ...COLORS.filter(([tone])=>tone!==data.nodes[i].tone).map(([tone,name])=>({label:tone?`Tone: ${name}`:'Remove tone',onSelect:()=>writeFromDiagram(E.set_tone(currentSource(),id(i),tone))})),
-      {label:'Delete node',onSelect:()=>writeFromDiagram(E.delete_node(currentSource(),id(i)))},
+      menuItem('Add node below','plus',()=>nameDialog('Add node below','',label=>writeFromDiagram(G.add_node_below(currentSource(),id(i),label)))),
+      ...next(i).map(j=>menuItem(`Add node before ${data.nodes[j].label}`,'plus',()=>nameDialog('Add node between','',label=>writeFromDiagram(E.insert_between(currentSource(),id(i),id(j),label))))),
+      menuItem('Rename','text',()=>nameDialog('Rename node',data.nodes[i].label,label=>writeFromDiagram(E.rename(currentSource(),id(i),label)))),
+      ...group(data.nodes.map((n,j)=>allowed(i,j)?menuItem(`Connect to ${n.label}`,'',()=>writeFromDiagram(G.connect(currentSource(),id(i),id(j)))):null).filter(Boolean)),
+      ...group(COLORS.map(([color,tone,name])=>colorItem(name,tone,tone===data.nodes[i].tone,()=>{if(tone!==data.nodes[i].tone)writeFromDiagram(E.set_tone(currentSource(),id(i),color));}))),
+      ...group([...next(i).map(j=>menuItem(`Remove arrow to ${data.nodes[j].label}`,'x',()=>writeFromDiagram(E.remove_edge(currentSource(),id(i),id(j))))),menuItem('Delete node','x',()=>writeFromDiagram(E.delete_node(currentSource(),id(i))))]),
     ],
   };
   if(isManual()){
@@ -183,7 +193,7 @@ $('#history').onclick=()=>{
   if(!versions.length)list.append(element('p','detail','No saved versions yet.'));
   versions.forEach((v,i)=>{const item=element('article',''),head=element('div','revision-list__header'),date=Number.isNaN(Date.parse(v.stamp))?v.stamp:new Date(v.stamp).toLocaleString();const restore=button('Restore',()=>{change(D.update(workspace,{$:'Restore',index:i,stamp:stamp()}),{navigation:true});ui.modal.close();notice('Version restored. Your previous work is in history.');});head.append(element('span','item-title',`${i===0?'Latest · ':''}${date}`),restore);item.append(head,element('pre','revision-list__source',v.source));list.append(item);});
 };
-$('#syntax-help').onclick=()=>{const body=openModal('A small, familiar syntax');body.append(element('p','text','Start with flowchart TD or graph TD. Add named nodes, square labels and arrows.'),element('pre','revision-list__source','flowchart TD\n  A[Question] --> B[Evidence]\n  B -->|supports| C[Conclusion]\n  %% A comment\n  D["A label with punctuation"]'),element('p','detail','You can chain arrows, use semicolons and reuse node IDs. Color a node with A:::accent, A:::law, A:::draft or A:::conflict (classDef lines are kept for other tools). This first version supports top-to-bottom flows with rectangular nodes, up to 60 nodes and 120 connections. Other shapes, return loops, subgraphs, style lines and other directions are not supported yet. Unsupported source remains saved.'));};
+$('#syntax-help').onclick=()=>{const body=openModal('A small, familiar syntax');body.append(element('p','text','Start with flowchart TD or graph TD. Add named nodes, square labels and arrows.'),element('pre','revision-list__source','flowchart TD\n  A[Question] --> B[Evidence]\n  B -->|supports| C[Conclusion]\n  %% A comment\n  D["A label with punctuation"]'),element('p','detail','You can chain arrows, use semicolons and reuse node IDs. Color a node with A:::blue, A:::green, A:::yellow or A:::red (classDef lines are kept for other tools). This first version supports top-to-bottom flows with rectangular nodes, up to 60 nodes and 120 connections. Other shapes, return loops, subgraphs, style lines and other directions are not supported yet. Unsupported source remains saved.'));};
 $('#import').onclick=()=>{if(!locked)$('#import-file').click();else notice('Reload this tab before importing.',true);};
 $('#import-file').addEventListener('change',async e=>{
   const file=e.target.files[0];e.target.value='';if(!file)return;
