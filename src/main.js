@@ -64,9 +64,11 @@ function renderNavigation(){
     group.append(head,items);root.append(group);
   }
 }
-function graphData(result){
+function graphData(result,source){
   const nodes=array(result.nodes),edges=array(result.edges),ids=new Map(nodes.map((n,i)=>[n.id,i]));
-  return {ids:nodes.map(n=>n.id),nodes:nodes.map(n=>({label:n.label})),edges:edges.map(e=>({from:ids.get(e.from),to:ids.get(e.to),label:e.label}))};
+  // A node's color is the last of the lib's four tones its Mermaid classes give it (Graph.bend).
+  const tones=new Map();for(const t of array(G.tones(source)))tones.set(t.id,t.tone);
+  return {ids:nodes.map(n=>n.id),nodes:nodes.map(n=>({label:n.label,tone:tones.get(n.id)??''})),edges:edges.map(e=>({from:ids.get(e.from),to:ids.get(e.to),label:e.label}))};
 }
 // Editing from the diagram: the menu on a node, dragging between nodes and the manual layout. Every change is
 // Mermaid written by Bend: Graph.bend adds a line at the end, Edit.bend rewrites only the lines that mention
@@ -78,6 +80,8 @@ function writeFromDiagram(next,{version=true}={}){
   const firstWrite=!doc();if(version)checkpoint();change(D.write_source(workspace,next),{navigation:firstWrite});
   ui.source.value=currentSource();if(!firstWrite)renderGraph();
 }
+// The lib's four tones, as the Mermaid classes Borzoi writes (`A:::draft`); '' removes the color.
+const COLORS=[['accent','Accent'],['law','Law'],['draft','Draft'],['conflict','Conflict'],['','None']];
 const isManual=()=>Boolean(doc())&&Boolean(E.is_manual(currentSource()));
 function placesOf(source){const out=new Map();for(const p of array(E.places(source)))out.set(p.id,{x:Number(p.x),y:Number(p.y)});return out;}
 function diagramActions(data){
@@ -92,6 +96,7 @@ function diagramActions(data){
       {label:'Rename',onSelect:()=>nameDialog('Rename node',data.nodes[i].label,label=>writeFromDiagram(E.rename(currentSource(),id(i),label)))},
       ...data.nodes.map((n,j)=>allowed(i,j)?{label:`Connect to ${n.label}`,onSelect:()=>writeFromDiagram(G.connect(currentSource(),id(i),id(j)))}:null).filter(Boolean),
       ...next(i).map(j=>({label:`Remove arrow → ${data.nodes[j].label}`,onSelect:()=>writeFromDiagram(E.remove_edge(currentSource(),id(i),id(j)))})),
+      ...COLORS.filter(([tone])=>tone!==data.nodes[i].tone).map(([tone,name])=>({label:tone?`Tone: ${name}`:'Remove tone',onSelect:()=>writeFromDiagram(E.set_tone(currentSource(),id(i),tone))})),
       {label:'Delete node',onSelect:()=>writeFromDiagram(E.delete_node(currentSource(),id(i)))},
     ],
   };
@@ -139,10 +144,10 @@ function renderGraph(){
   let result;try{result=source.length>MAX_SOURCE?{error:'The source is too long (20,000 characters maximum).',line:0}:G.parse(source);}catch{result={error:'This diagram could not be parsed. Your source is still saved.',line:0};}
   const message=$('#parse-message');setStatusTone(message,!!result.error);
   if(result.error){
-    if(!lastGood){for(const version of array(doc()?.history??{$:'Nil'})){try{const old=G.parse(version.source);if(!old.error){lastGood=graphData(old);graphCache.set(graphKey(),lastGood);displayGraph(lastGood);$('#graph-stats').textContent=`${lastGood.nodes.length} nodes · ${lastGood.edges.length} connections`;break;}}catch{}}}
+    if(!lastGood){for(const version of array(doc()?.history??{$:'Nil'})){try{const old=G.parse(version.source);if(!old.error){lastGood=graphData(old,version.source);graphCache.set(graphKey(),lastGood);displayGraph(lastGood);$('#graph-stats').textContent=`${lastGood.nodes.length} nodes · ${lastGood.edges.length} connections`;break;}}catch{}}}
     message.textContent=(result.line?`Line ${result.line}: `:'')+result.error;if(lastGood)$('#graph-stats').textContent='Showing the last valid diagram';
     if(!lastGood){mounted?.destroy();mounted=null;ui.diagram.replaceChildren(element('p','detail','Your diagram will appear here when the source is valid.'));$('#graph-stats').textContent='Source needs attention';}return;}
-  lastGood=graphData(result);graphCache.set(graphKey(),lastGood);displayGraph(lastGood,true);message.textContent='Valid flowchart · Mermaid syntax';$('#graph-stats').textContent=`${lastGood.nodes.length} nodes · ${lastGood.edges.length} connections`;
+  lastGood=graphData(result,source);graphCache.set(graphKey(),lastGood);displayGraph(lastGood,true);message.textContent='Valid flowchart · Mermaid syntax';$('#graph-stats').textContent=`${lastGood.nodes.length} nodes · ${lastGood.edges.length} connections`;
 }
 function render(){
   const d=doc(),p=project(),title=d?.name??'New diagram';
@@ -178,7 +183,7 @@ $('#history').onclick=()=>{
   if(!versions.length)list.append(element('p','detail','No saved versions yet.'));
   versions.forEach((v,i)=>{const item=element('article',''),head=element('div','revision-list__header'),date=Number.isNaN(Date.parse(v.stamp))?v.stamp:new Date(v.stamp).toLocaleString();const restore=button('Restore',()=>{change(D.update(workspace,{$:'Restore',index:i,stamp:stamp()}),{navigation:true});ui.modal.close();notice('Version restored. Your previous work is in history.');});head.append(element('span','item-title',`${i===0?'Latest · ':''}${date}`),restore);item.append(head,element('pre','revision-list__source',v.source));list.append(item);});
 };
-$('#syntax-help').onclick=()=>{const body=openModal('A small, familiar syntax');body.append(element('p','text','Start with flowchart TD or graph TD. Add named nodes, square labels and arrows.'),element('pre','revision-list__source','flowchart TD\n  A[Question] --> B[Evidence]\n  B -->|supports| C[Conclusion]\n  %% A comment\n  D["A label with punctuation"]'),element('p','detail','You can chain arrows, use semicolons and reuse node IDs. This first version supports top-to-bottom flows with rectangular nodes, up to 60 nodes and 120 connections. Other shapes, return loops, subgraphs, styles and other directions are not supported yet. Unsupported source remains saved.'));};
+$('#syntax-help').onclick=()=>{const body=openModal('A small, familiar syntax');body.append(element('p','text','Start with flowchart TD or graph TD. Add named nodes, square labels and arrows.'),element('pre','revision-list__source','flowchart TD\n  A[Question] --> B[Evidence]\n  B -->|supports| C[Conclusion]\n  %% A comment\n  D["A label with punctuation"]'),element('p','detail','You can chain arrows, use semicolons and reuse node IDs. Color a node with A:::accent, A:::law, A:::draft or A:::conflict (classDef lines are kept for other tools). This first version supports top-to-bottom flows with rectangular nodes, up to 60 nodes and 120 connections. Other shapes, return loops, subgraphs, style lines and other directions are not supported yet. Unsupported source remains saved.'));};
 $('#import').onclick=()=>{if(!locked)$('#import-file').click();else notice('Reload this tab before importing.',true);};
 $('#import-file').addEventListener('change',async e=>{
   const file=e.target.files[0];e.target.value='';if(!file)return;
