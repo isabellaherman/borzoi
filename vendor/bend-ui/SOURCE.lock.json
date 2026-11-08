@@ -1,6 +1,6 @@
 {
   "source": "Bend-UI",
-  "version": "1.0.6",
+  "version": "1.0.8",
   "state": "Local working tree, pending owner review; not a published release",
   "files": {
     "DIAGRAM.bend": "17c385edce4848ab6f780f800b1dfc445a15486d7fd922df95242d295a25c1e7",
@@ -9,23 +9,23 @@
     "LAWS.bend": "aa21eaf7a8f2928724e1a99b573ee5104a69d043f36529701818bcf94de32db7",
     "MOTION.bend": "3f4b7b2828c21b3442740db817a649d73548436ad5afedb02fb087a5fd16c57e",
     "PROOF.bend": "a57b154774efaa945b5e8083487d58642186519cd378d75b61e790a420959292",
-    "README.md": "59123c22d0024e5a1d384bf0d99467df9a221ea7c43c87da32194844a1d62cd7",
+    "README.md": "b4442941fb4463c89fa2398f5d2f3e74c1d70a82b864cc06ee14b3a6d5e3738f",
     "SPEC.bend": "b7dde62f68286269f13f467fd8ffbdc0cedb13c8b5d2bea9fe7f9b0b3bb46d47",
     "TOKENS.bend": "19bdd482fdc857ddc7cf6bde3f6c36f0dad8668fdae6f0ed27dee00d0183cffb",
-    "diagram.js": "e92b01739d4537cda9c2fd9b3c759d0ecbca9363141cc4d18e1d747433a9b328",
+    "diagram.js": "f24078b13e046159234541f6a6c922439c50a54c4a921bb6c8dce586ef517265",
     "icons.js": "8b0db54daa1b5d3215f27f8f90181e46f30631f87cde3df43ff21bcbd63c684c",
     "keys.js": "ea1e8b85387e5a39cc370af39b8ad944939a71f02104c0993a4fb52e5edb42f9",
-    "package.json": "763f033c0c311ed06a7dbbc15669a9a9d747441f0fad3ba5fff79bfe09ebfa8d",
-    "ui.css": "1758e3736d0e73b7ebc2cc310f07df05d2bb6bec673f3b1aae8ed4287983b866",
+    "package.json": "eda67b8fae0337972d9aeca7a0738fbe12028cb5217e48d8193521d0c96b0c3d",
+    "ui.css": "55e924a0a98574437d695883e5ee925b2eadc684022bb9024e9853fc699c9996",
     "ui.js": "0835c887940073a8842bf6230a89e89e6e2dc58caf70541a7df791dbf5bcd705",
     "WORKSPACE.bend": "365285fc54a367ef07f44bb547cbbda5337d2706a5ce1b644152de83b3d4dc29",
     "WORKSPACE_LAWS.bend": "b843a7b3bb3ff87e89f4753ad4b94216da63727c656b63c174b826fc3d74007e",
     "WORKSPACE_PROOF.bend": "7a164d4ef9bc353f1155e5a5640c0cc193e6ba4d6bd1b9857beea8630b518fdf",
     "workspace.js": "7b8a870b8108d1130c43e4b3e42393c03b15c1760fe0f92d506c4eac375b7171",
     "workspace.css": "18efff6d36a0041c923577d10a90ae69e3bfee97a9c8e6da0edb7db4ad4a6171",
-    "CHANGELOG.md": "4fddedb29c85cbad86532409388f7fbcff048d417726c9cd566fb2635dce44b7",
-    "docs/BORZOI-NEEDS.md": "90fa4bb2da14b8fbaf5363bb30c13bc2dda1c894528376bf13cdc3ca52680292",
-    "docs/workspace.html": "22c3e951c3a3c1b688e1f8557419170293e892101cbb65215e88d789f8aa940d",
+    "CHANGELOG.md": "b28e194d2c62311667d6ef9e4f8a16bc66ee88edbda8f3631de4ec93ead3c01f",
+    "docs/BORZOI-NEEDS.md": "a89de329857133a958001e3823191175cf93b7b0c3f3a713d3233be66b9407d1",
+    "docs/workspace.html": "c93c46368cb3d34289ba86af8b5155f7c54f9110a3dc0e6444811d89f3be549c",
     "docs/workspace.js": "b59a7cb5b6dc410977a1fca732b149b6bcb4a6bdc9b42c67e7d8b326e7528f28"
   }
 }

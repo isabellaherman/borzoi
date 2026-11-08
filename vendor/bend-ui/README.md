@@ -259,6 +259,8 @@ mountDiagram(el, data, {
 
 Node menu (optional): pass `nodeMenu: (i) => [{ label, disabled, onSelect }]`. Clicking a node opens the lib's `.menu` with those items; picking one calls its `onSelect`. As with connect, the diagram doesn't change itself.
 
+Free layout (optional): pass `positions: [{ x, y }]` (px from the diagram's corner) and `onNodeMove: (i, { x, y }) => …`. The nodes sit at those places instead of in rows, and dragging a node calls `onNodeMove` when it's let go. Keep the positions in your data and draw again.
+
 ## Chart
 
 Pie, bars, line and area: one mark each, no card around them. `CHART.bend` places every mark (a slice's turns, the grid's step, where a value sits, the curve); `chart.js` only draws. The motion is `MOTION.bend` and the duration tokens, the same the thread and the agent use.
@@ -526,6 +528,6 @@ Try it: change `btn_padding_x` to `10` in `TOKENS.bend` and run `bun run check`.
 
 Read [`AGENTS.md`](AGENTS.md). `LAWS.bend` and `SPEC.bend` change only with the repo owner's approval.
 
-## Workspace extension (local 1.0.4 review)
+## Workspace extension (1.0.7)
 
 See [the needs register](docs/BORZOI-NEEDS.md) for every Borzoi requirement and the [component review artifact](docs/workspace.html). Import `bend-ui/workspace` to opt in. Existing components and owner laws are unchanged.

@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.8 (2026-11-08)
+
+- **Diagram: free layout**: `mountDiagram(el, data, { positions: [{ x, y }], onNodeMove })`. With positions the nodes sit where the app puts them instead of in rows (`.diagram--free`); press a node and move it past a few pixels to drag it, and `onNodeMove(i, { x, y })` is called when it's let go. The click that ends a move doesn't open the node's menu. The diagram grows to where its nodes reach. Switching between rows and positions glides, as any redraw does.
+- New: `.diagram--free`, `.is-moving` (the lifted node takes `--shadow-float`). No new token, law or motion.
+
+## 1.0.7 (2026-11-08)
+
+- **Workspace (opt-in)**: `import "bend-ui/workspace"` adds dialog (`createDialog`), feedback (`createFeedback`, `setStatusTone`), breadcrumbs, the source/preview workbench (`configureSourceEditor`), the revision list, and the sidebar footer (`createSidebar`). Existing components keep their definitions and appearance.
+- Every new visual value is a token in `TOKENS.bend`, exposed by `ui.js`. Feedback tone and timing, pane direction and sidebar dismissal are decided in `WORKSPACE.bend`.
+- 15 extension laws in `WORKSPACE_LAWS.bend`, proved through `PROOF.bend`. `LAWS.bend` and `SPEC.bend` are unchanged.
+- Docs: the Borzoi needs register (`docs/BORZOI-NEEDS.md`) and the workspace review page (`docs/workspace.html`). Each component will be reviewed one at a time.
+
 ## 1.0.6 (2026-11-08)
 
 - **Diagram: connect**: `mountDiagram(el, data, { isValidConnection, onConnect })`, React Flow's names. Each node gets a handle (a `.dot`) at the middle of its bottom edge, shown on hover; drag it and a straight arrow (the diagram's own wire) follows the pointer. Let go on another node and, if `isValidConnection({ source, target })` allows it, `onConnect({ source, target })` is called (node indexes). The diagram doesn't change itself: the app adds the edge and redraws.
@@ -14,13 +26,6 @@
 - Motion, all from the lib: the pie sweeps in (`ease_out`), bars rise one after another on the agent's spring (`MOTION.spring`, `stagger_ms`), the line runs in like the thread with its glow, node and glint, the area rises. Pointing keeps a mark and dims the rest (`chart_dim`); line and area use the thread's `.node`.
 - Tokens: `chart_tone_1`…`4`, `chart_hole`, `chart_dim` are new values; `chart_gap`, `chart_lift`, `chart_bar_max`, `chart_bar_gap`, `chart_axis_x`, `chart_axis_y` name values the scale already has. No new law.
 - Docs: a Chart page under Components.
-
-## 1.0.4 (2026-11-08, working tree — pending review)
-
-- Opt-in `bend-ui/workspace`: dialog, feedback, breadcrumbs, source/preview workspace, revision list, and sidebar footer. Existing components keep their definitions and appearance.
-- All new visual values are tokens in `TOKENS.bend`, exposed by `ui.js`. Feedback and sidebar decisions are in `WORKSPACE.bend`.
-- Added 15 extension laws and proofs without modifying the owner’s `LAWS.bend` or `SPEC.bend`.
-- The Borzoi needs register and component review artifact explain each addition. No new commit, tag, or publication is part of this correction.
 
 ## 1.0.3 (2026-11-07)
 

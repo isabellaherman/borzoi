@@ -1,6 +1,6 @@
 # Workspace needs exposed by Borzoi
 
-Status: local 1.0.4 working tree, awaiting owner review. No release or tag.
+Status: released in 1.0.7. Each component is still reviewed one at a time. Diagram connect and the node menu shipped in 1.0.6.
 
 Borzoi previously bypassed the library with application CSS. This repair removes that layer. This register makes every need visible in the library rather than silently recreating a design system in its consumer.
 
@@ -34,6 +34,7 @@ Import `bend-ui/workspace` (or `workspace.js` from a source snapshot). It loads 
 | Sidebar utility area and responsive interaction | `side__footer`, `side__caption`; `createSidebar(side, toggle)` | Existing spacing and breakpoint | Universal inside/desktop-dismissal laws; browser navigation checks |
 | Connect existing nodes by dragging (Borzoi turns it into `A --> B` in the source) | `mountDiagram(el, data, { isValidConnection, onConnect })`; `.diagram__handle` (a `.dot`), the drag line is a `.diagram__wires` path | Existing `--dot-size`, wire and arrowhead | Browser checks in the step 1 and step 2 review artifacts; the app's own rules (no loop, no repeated arrow) are Borzoi laws |
 | Add a node below, connect or rename from a menu on the node | `mountDiagram(el, data, { nodeMenu })`; the node is a `.dropdown` with the lib's `.menu`/`.menu__item`; `.diagram__open` | Existing focus, menu and layer tokens | Browser checks in the node menu review artifact |
+| Manual layout: place nodes anywhere, positions kept by the app | `mountDiagram(el, data, { positions, onNodeMove })`; `.diagram--free`, `.is-moving` | Existing spacing, layer and shadow tokens | Browser checks in the editing flow review artifact |
 
 `WORKSPACE.bend` owns feedback tone, timeout policy, pane direction and outside-click dismissal. `workspace.js` adapts these decisions to DOM and browser events. `TOKENS.bend` owns new visual values, exposed by `ui.js`. `workspace.css` adds named compositions; it does not restyle base components or app IDs. `WORKSPACE_LAWS.bend` and `WORKSPACE_PROOF.bend` add 15 laws through the existing proof entry point.
 
