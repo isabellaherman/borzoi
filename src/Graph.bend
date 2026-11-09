@@ -17,7 +17,7 @@ def count_edges(es: List<&2, P.Edge>) -> Nat:
 def index_of(ns: List<&2, P.Node>, +id: String, +index: Nat) -> Nat:
   match ns:
     case Nil{}: index
-    case P.Node{n, label} <> t:
+    case P.Node{n, label, shape} <> t:
       Bool.pick(Nat, String.eq(n, id), index, index_of(t, id, 1n+index))
 
 def layout_edges(es: List<&2, P.Edge>, +ns: List<&2, P.Node>) -> List<&2, D.Edge>:
@@ -55,14 +55,25 @@ def line_break(+source: String) -> String:
 def write_line(+source: String, line: String) -> String:
   base(source) ++ line_break(base(source)) ++ "  " ++ line
 
-# A label in double quotes, so any text is a valid label; a double quote inside becomes a single one.
+# A label in double quotes, so any text is a valid label; a double quote inside is written #quot;, as Mermaid does.
+def quote_safe.at(quote: Bool, +c: U32) -> String:
+  match quote:
+    case True{}: "#quot;"
+    case False{}: SCon{Chr{c}, SNil{}}
+
 def quote_safe(s: String) -> String:
   match s:
     case SNil{}: SNil{}
-    case SCon{Chr{+c}, t}: SCon{Chr{Bool.pick(U32, U32.is_eq(c, 34), 39, c)}, quote_safe(t)}
+    case SCon{Chr{+c}, t}: quote_safe.at(U32.is_eq(c, 34), c) ++ quote_safe(t)
+
+# A node written with its shape: A["text"] for a box (0), A{"text"} for a decision (1).
+def shaped_text(id: String, label: String, shape: U32) -> String:
+  match shape:
+    case 0: id ++ "[\"" ++ quote_safe(String.trim(label)) ++ "\"]"
+    case _: id ++ "{\"" ++ quote_safe(String.trim(label)) ++ "\"}"
 
 def node_text(id: String, label: String) -> String:
-  id ++ "[\"" ++ quote_safe(String.trim(label)) ++ "\"]"
+  shaped_text(id, label, 0)
 
 def nodes_of(g: P.Graph) -> List<&2, P.Node>:
   match g:

@@ -71,16 +71,16 @@ law unchanged_checkpoint_is_not_duplicated:
    D.Document{1n, "D", "same", [D.Version{"same", "then"}]} : D.Document}
 
 law arrow_preserves_direction:
-  {P.parse("flowchart TD\nA --> B") == P.Graph{[P.Node{"A", "A"}, P.Node{"B", "B"}], [P.Edge{"A", "B", ""}], "", 0n} : P.Graph}
+  {P.parse("flowchart TD\nA --> B") == P.Graph{[P.Node{"A", "A", 0}, P.Node{"B", "B", 0}], [P.Edge{"A", "B", ""}], "", 0n} : P.Graph}
 
 law labels_preserve_unicode:
-  {P.parse("flowchart TD\nA[Pesquisa ação] --> B[結果]") == P.Graph{[P.Node{"A", "Pesquisa ação"}, P.Node{"B", "結果"}], [P.Edge{"A", "B", ""}], "", 0n} : P.Graph}
+  {P.parse("flowchart TD\nA[Pesquisa ação] --> B[結果]") == P.Graph{[P.Node{"A", "Pesquisa ação", 0}, P.Node{"B", "結果", 0}], [P.Edge{"A", "B", ""}], "", 0n} : P.Graph}
 
 law incomplete_arrow_is_rejected:
   {P.is_valid(P.parse("flowchart TD\nA -->")) == False{} : Bool}
 
 law repeated_reference_keeps_label:
-  {P.parse("flowchart TD\nA[Idea]\nA --> B") == P.Graph{[P.Node{"A", "Idea"}, P.Node{"B", "B"}], [P.Edge{"A", "B", ""}], "", 0n} : P.Graph}
+  {P.parse("flowchart TD\nA[Idea]\nA --> B") == P.Graph{[P.Node{"A", "Idea", 0}, P.Node{"B", "B", 0}], [P.Edge{"A", "B", ""}], "", 0n} : P.Graph}
 
 # REGRESSION: production starts in edit mode, with no projects or selection.
 law initial_is_empty:
@@ -126,7 +126,7 @@ law connect_after_line_break:
 # REGRESSION: the connected source parses with the new arrow.
 law connected_source_has_the_arrow:
   {G.parse(G.connect("flowchart TD\nA --> B\nC", "A", "C")) ==
-   P.Graph{[P.Node{"A", "A"}, P.Node{"B", "B"}, P.Node{"C", "C"}], [P.Edge{"A", "B", ""}, P.Edge{"A", "C", ""}], "", 0n} : P.Graph}
+   P.Graph{[P.Node{"A", "A", 0}, P.Node{"B", "B", 0}, P.Node{"C", "C", 0}], [P.Edge{"A", "B", ""}, P.Edge{"A", "C", ""}], "", 0n} : P.Graph}
 
 # REGRESSION: allowed and refused connections.
 law new_arrow_is_allowed:
@@ -138,15 +138,15 @@ law return_loop_is_allowed:
 # REGRESSION: a source with a return loop is valid and keeps every arrow.
 law return_loop_parses:
   {G.parse("flowchart TD\nA --> B\nB --> A") ==
-   P.Graph{[P.Node{"A", "A"}, P.Node{"B", "B"}], [P.Edge{"A", "B", ""}, P.Edge{"B", "A", ""}], "", 0n} : P.Graph}
+   P.Graph{[P.Node{"A", "A", 0}, P.Node{"B", "B", 0}], [P.Edge{"A", "B", ""}, P.Edge{"B", "A", ""}], "", 0n} : P.Graph}
 
 # REGRESSION: a slanted shape is read as its text.
 law slanted_shape_is_its_text:
-  {G.parse("flowchart TD\nF[/points login/]") == P.Graph{[P.Node{"F", "points login"}], [], "", 0n} : P.Graph}
+  {G.parse("flowchart TD\nF[/points login/]") == P.Graph{[P.Node{"F", "points login", 0}], [], "", 0n} : P.Graph}
 
 # REGRESSION: an arrow from a node to itself is valid, as in Mermaid, and keeps its arrow.
 law self_arrow_parses:
-  {G.parse("flowchart TD\nA --> A") == P.Graph{[P.Node{"A", "A"}], [P.Edge{"A", "A", ""}], "", 0n} : P.Graph}
+  {G.parse("flowchart TD\nA --> A") == P.Graph{[P.Node{"A", "A", 0}], [P.Edge{"A", "A", ""}], "", 0n} : P.Graph}
 
 law repeated_arrow_is_refused:
   {G.can_connect("flowchart TD\nA --> B", "A", "B") == False{} : Bool}
@@ -175,12 +175,35 @@ law node_below_is_one_arrow:
 
 # REGRESSION: a double quote in a label cannot break the source.
 law quotes_in_labels_are_kept_safe:
-  {G.add_node("flowchart TD\nA", "say \"hi\"") == "flowchart TD\nA\n  say_hi[\"say 'hi'\"]" : String}
+  {G.add_node("flowchart TD\nA", "say \"hi\"") == "flowchart TD\nA\n  say_hi[\"say #quot;hi#quot;\"]" : String}
+
+# REGRESSION: Mermaid's entity codes in a label are read as their characters; an unknown # stays.
+law entities_in_labels_are_read:
+  {G.parse("flowchart TD\nA[\"say #quot;hi#quot; #35;1 #x; #\"]") == P.Graph{[P.Node{"A", "say \"hi\" #1 #x; #", 0}], [], "", 0n} : P.Graph}
+
+# REGRESSION: a quote written by Borzoi reads back as the same quote.
+law quotes_round_trip:
+  {G.parse(G.add_node("flowchart TD", "say \"hi\"")) == P.Graph{[P.Node{"say_hi", "say \"hi\"", 0}], [], "", 0n} : P.Graph}
 
 # REGRESSION: renaming writes the node again; the parser keeps its id and takes the new label.
 law rename_keeps_the_node:
   {G.parse(G.rename_node("flowchart TD\nA[Idea] --> B", "A", "Plan")) ==
-   P.Graph{[P.Node{"A", "Plan"}, P.Node{"B", "B"}], [P.Edge{"A", "B", ""}], "", 0n} : P.Graph}
+   P.Graph{[P.Node{"A", "Plan", 0}, P.Node{"B", "B", 0}], [P.Edge{"A", "B", ""}], "", 0n} : P.Graph}
+
+# ---------- Decisions and arrow text ----------
+
+# REGRESSION: A{text} is a decision node; its label is read like a box's, quoted or not.
+law decision_is_read:
+  {G.parse("flowchart TD\nA{Ready?} --> B{\"Ship [now]?\"}") ==
+   P.Graph{[P.Node{"A", "Ready?", 1}, P.Node{"B", "Ship [now]?", 1}], [P.Edge{"A", "B", ""}], "", 0n} : P.Graph}
+
+# REGRESSION: text in the middle of an arrow, A -- text --> B, is the arrow's label, as with -->|text|.
+law arrow_text_is_a_label:
+  {G.parse("flowchart TD\nA -- Stay --> B\nA -- \"Don't allow\" --> C") == G.parse("flowchart TD\nA -->|Stay| B\nA -->|Don't allow| C") : P.Graph}
+
+# REGRESSION: an arrow label in quotes is read without them.
+law quoted_arrow_label_is_unquoted:
+  {G.parse("flowchart TD\nA -->|\"yes\"| B") == G.parse("flowchart TD\nA -->|yes| B") : P.Graph}
 
 # ---------- Edits in place (Edit.bend). Every line a change doesn't concern stays exactly as it was. ----------
 
@@ -193,6 +216,14 @@ law rename_label_equal_to_id:
 
 law rename_own_line:
   {E.rename("flowchart TD\n  A[Idea]\n  A --> B", "A", "Plan") == "flowchart TD\n  A[\"Plan\"]\n  A --> B" : String}
+
+# REGRESSION: renaming a decision keeps it a decision.
+law rename_keeps_the_decision:
+  {E.rename("flowchart TD\n  A{Ready?} --> B", "A", "Done?") == "flowchart TD\n  A{\"Done?\"} --> B" : String}
+
+# REGRESSION: rewriting a line for another edit keeps its decisions.
+law delete_keeps_other_decisions:
+  {E.delete_node("flowchart TD\n  A{Ready?} --> B\n  A --> C", "B") == "flowchart TD\n  A{\"Ready?\"}\n  A --> C" : String}
 
 # REGRESSION: deleting a node takes its arrows and its layout line; the other nodes stay.
 law delete_takes_its_arrows:

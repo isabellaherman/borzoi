@@ -72,7 +72,7 @@ def drop_node.keep(drop: Bool, +n: P.Node, +rest: List<&2, P.Node>) -> List<&2, 
 def drop_node(ns: List<&2, P.Node>, +id: String) -> List<&2, P.Node>:
   match ns:
     case Nil{}: Nil{}
-    case P.Node{+n, +label} <> t: drop_node.keep(String.eq(n, id), P.Node{n, label}, drop_node(t, id))
+    case P.Node{+n, +label, +shape} <> t: drop_node.keep(String.eq(n, id), P.Node{n, label, shape}, drop_node(t, id))
 
 def drop_edge.keep(drop: Bool, +e: P.Edge, +rest: List<&2, P.Edge>) -> List<&2, P.Edge>:
   Bool.pick(List<&2, P.Edge>, drop, rest, e <> rest)
@@ -88,14 +88,19 @@ def member(xs: List<&2, String>, +id: String) -> Bool:
     case Nil{}: False{}
     case x <> t: String.eq(x, id) || member(t, id)
 
-# A node's own label, or "" when it is just its id.
+# A node's own label, or "" when it is just its id (a box whose label is its id).
 def label_of(ns: List<&2, P.Node>, +id: String) -> String:
   match ns:
     case Nil{}: ""
-    case P.Node{+n, +l} <> t: Bool.pick(String, String.eq(n, id), Bool.pick(String, String.eq(n, l), "", l), label_of(t, id))
+    case P.Node{+n, +l, +s} <> t: Bool.pick(String, String.eq(n, id), Bool.pick(String, String.eq(n, l) && U32.is_zero(s), "", l), label_of(t, id))
+
+def shape_of(ns: List<&2, P.Node>, +id: String) -> U32:
+  match ns:
+    case Nil{}: 0
+    case P.Node{+n, l, +s} <> t: Bool.pick(U32, String.eq(n, id), s, shape_of(t, id))
 
 def endpoint(+id: String, +ns: List<&2, P.Node>, +used: List<&2, String>) -> String:
-  Bool.pick(String, String.is_empty(label_of(ns, id)) || member(used, id), id, G.node_text(id, label_of(ns, id)))
+  Bool.pick(String, String.is_empty(label_of(ns, id)) || member(used, id), id, G.shaped_text(id, label_of(ns, id), shape_of(ns, id)))
 
 def mark(+id: String, +ns: List<&2, P.Node>, +used: List<&2, String>) -> List<&2, String>:
   Bool.pick(List<&2, String>, String.is_empty(label_of(ns, id)) || member(used, id), used, id <> used)
@@ -122,9 +127,9 @@ def node_statements.keep(written: Bool, +statement: String, +rest: List<&2, Stri
 def node_statements(ns: List<&2, P.Node>, +es: List<&2, P.Edge>, +all: List<&2, String>, +used: List<&2, String>) -> List<&2, String>:
   match ns:
     case Nil{}: Nil{}
-    case P.Node{+id, +label} <> t:
-      node_statements.keep(Bool.not(member(used, id)) && (Bool.not(String.eq(id, label)) || (Bool.not(in_edges(es, id)) && (mention_count(all, id) <= 1n : Nat))),
-        Bool.pick(String, String.eq(id, label), id, G.node_text(id, label)), node_statements(t, es, all, used))
+    case P.Node{+id, +label, +shape} <> t:
+      node_statements.keep(Bool.not(member(used, id)) && (Bool.not(String.eq(id, label) && U32.is_zero(shape)) || (Bool.not(in_edges(es, id)) && (mention_count(all, id) <= 1n : Nat))),
+        Bool.pick(String, String.eq(id, label) && U32.is_zero(shape), id, G.shaped_text(id, label, shape)), node_statements(t, es, all, used))
 
 def append(xs: List<&2, String>, ys: List<&2, String>) -> List<&2, String>:
   match xs:
@@ -204,17 +209,17 @@ def remove_edge(+source: String, +from: String, +to: String) -> String:
 def relabel(ns: List<&2, P.Node>, +id: String, +label: String) -> List<&2, P.Node>:
   match ns:
     case Nil{}: Nil{}
-    case P.Node{+n, old} <> t: Bool.pick(P.Node, String.eq(n, id), P.Node{n, label}, P.Node{n, old}) <> relabel(t, id, label)
+    case P.Node{+n, old, +shape} <> t: Bool.pick(P.Node, String.eq(n, id), P.Node{n, label, shape}, P.Node{n, old, shape}) <> relabel(t, id, label)
 
 def labels(ns: List<&2, P.Node>, +id: String) -> Bool:
   match ns:
     case Nil{}: False{}
-    case P.Node{+n, +label} <> t: (String.eq(n, id) && Bool.not(String.eq(n, label))) || labels(t, id)
+    case P.Node{+n, +label, shape} <> t: (String.eq(n, id) && Bool.not(String.eq(n, label))) || labels(t, id)
 
 # A line labels a node when it gives it a label different from its id, or writes it with brackets
-# (`Idea["Idea"]` reads the same as `Idea`, but it is where the label lives).
+# (`Idea["Idea"]` reads the same as `Idea`, but it is where the label lives; so is `Idea{Idea}`).
 def labels_node(+line: String, +id: String) -> Bool:
-  Bool.not(is_header(line)) && P.has_node(G.nodes_of(line_graph(line)), id) && (labels(G.nodes_of(line_graph(line)), id) || String.contains(line, id ++ "["))
+  Bool.not(is_header(line)) && P.has_node(G.nodes_of(line_graph(line)), id) && (labels(G.nodes_of(line_graph(line)), id) || String.contains(line, id ++ "[") || String.contains(line, id ++ "{"))
 
 def any_labels(ls: List<&2, String>, +id: String) -> Bool:
   match ls:

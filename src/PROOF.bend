@@ -58,10 +58,17 @@ def L.readable_id_drops_accents_and_spaces(): {==}
 def L.first_node_starts_a_flowchart(): {==}
 def L.node_below_is_one_arrow(): {==}
 def L.quotes_in_labels_are_kept_safe(): {==}
+def L.entities_in_labels_are_read(): {==}
+def L.quotes_round_trip(): {==}
 def L.rename_keeps_the_node(): {==}
+def L.decision_is_read(): {==}
+def L.arrow_text_is_a_label(): {==}
+def L.quoted_arrow_label_is_unquoted(): {==}
 def L.rename_rewrites_its_line(): {==}
 def L.rename_label_equal_to_id(): {==}
 def L.rename_own_line(): {==}
+def L.rename_keeps_the_decision(): {==}
+def L.delete_keeps_other_decisions(): {==}
 def L.delete_takes_its_arrows(): {==}
 def L.remove_arrow_keeps_nodes(): {==}
 def L.insert_between_keeps_the_label(): {==}

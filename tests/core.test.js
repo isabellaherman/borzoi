@@ -84,7 +84,7 @@ describe('Mermaid flowchart subset',()=>{
     const g=G.parse('flowchart TD\nA[One]\nA --> B\nA[Two]');expect(g.error).toBe('');expect(array(g.nodes)[0].label).toBe('Two');
   });
   test('unsupported syntax produces a clear error',()=>{
-    for(const s of ['sequenceDiagram\nA->>B:hello','flowchart LR\nA-->B','flowchart TD\nA{Decision} --> B','flowchart TD\nA -->','flowchart TD\nA[broken','flowchart TD\nA -.-> B'])expect(G.parse(s).error.length).toBeGreaterThan(0);
+    for(const s of ['sequenceDiagram\nA->>B:hello','flowchart LR\nA-->B','flowchart TD\nA((Round)) --> B','flowchart TD\nA{{Hexagon}} --> B','flowchart TD\nA -- no end\nB','flowchart TD\nA -->','flowchart TD\nA[broken','flowchart TD\nA -.-> B'])expect(G.parse(s).error.length).toBeGreaterThan(0);
   });
   test('return loops and an arrow to the same node are valid, as in Mermaid',()=>{
     expect(G.parse('flowchart TD\nA-->B-->A').error).toBe('');expect(array(G.parse('flowchart TD\nA-->B-->C-->A').edges).length).toBe(3);
@@ -129,7 +129,7 @@ describe('node menu',()=>{
   });
   test('labels with brackets and quotes cannot break the source',()=>{
     const next=G.add_node('flowchart TD\nA','a [b] "c"');expect(G.parse(next).error).toBe('');
-    expect(array(G.parse(next).nodes)[1].label).toBe("a [b] 'c'");
+    expect(array(G.parse(next).nodes)[1].label).toBe('a [b] "c"');
   });
 });
 
