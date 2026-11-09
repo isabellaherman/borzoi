@@ -229,6 +229,10 @@ flowchart TD
 Rules:
 - Use only flowchart TD, nodes like A[Text], arrows --> and arrow labels -->|text|.
 - Color a node with :::red, :::yellow, :::green or :::blue.
+- Make one tree that reads top to bottom: a single starting node, and every other node reachable from it. Never leave a second group with no arrow to the first.
+- At most 4 arrows out of any node. With more items, group them under intermediate nodes (for example "High priority", "Medium priority").
+- Keep labels short: nodes up to about 4 words, arrow labels 1 or 2 words. Put numbers in the node, such as B[Started a run 51].
+- Put problems and ideas in their own diagram, or under one node such as "Problems", not beside the main flow.
 - No subgraphs, no other directions (such as LR), no rounded or diamond shapes.
 - Keep each diagram under 4,000 characters.
 - Send each version once, and send nothing else to this address.
