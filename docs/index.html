@@ -6,14 +6,14 @@
   <meta name="description" content="A simple tool for creating and editing diagrams.">
   <title>Borzoi — Diagrams</title>
 
-<link rel="stylesheet" crossorigin href="./chunk-ae83h37w.css"><script type="module" crossorigin src="./chunk-6ges5nsg.js"></script></head>
+<link rel="stylesheet" crossorigin href="./chunk-ae83h37w.css"><script type="module" crossorigin src="./chunk-y1s4g6j4.js"></script></head>
 <body class="desk" data-radius="pill">
   <div class="window is-full" id="app">
     <aside class="side is-open" id="sidebar" aria-label="Projects" data-side-multiple>
       <div class="side__head"><span class="side__label item-title side__text">Borzoi</span></div>
       <div class="side__body" id="project-list"></div>
       <div class="side__footer">
-        <button class="btn btn--ghost" id="new-project" title="New project"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg><span class="side__text">New project</span></button>
+        <div class="dropdown" id="new-project"><button class="btn btn--ghost" title="New project" aria-haspopup="menu" aria-expanded="false"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg><span class="side__text">New project</span></button><div class="menu menu--up" role="menu" hidden></div></div>
         <div class="separator"></div>
         <button class="btn btn--ghost" id="backup" title="Download backup"><svg class="icon" aria-hidden="true"><use href="#i-file-text"/></svg><span class="side__text">Download backup</span></button>
         <button class="btn btn--ghost" id="import" title="Import backup"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg><span class="side__text">Import backup</span></button>
