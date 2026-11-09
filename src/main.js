@@ -66,7 +66,7 @@ function renderNavigation(){
     }
     items.append(navButton('New diagram',()=>nameDialog('New diagram','Untitled diagram',value=>{checkpoint();change(D.create_diagram(workspace,p.id,value),{navigation:true});}),'plus'));
     group.append(sideRow(head,p.name,[
-      ...(p.inbox?[menuItem('Agent instructions','copy',()=>agentInstructions(p.id)),menuItem('New key','refresh-cw',()=>replaceKey(p)),element('hr','separator')]:[]),
+      ...(p.inbox?[menuItem('Agent instructions','copy',()=>agentInstructions(p.id)),menuItem('New key','refresh-cw',()=>replaceKey(p)),element('hr','separator')]:[menuItem('Receive agent diagrams','wand-sparkles',()=>{change(D.connect_agent(workspace,p.id,newKey()),{navigation:true});agentInstructions(p.id);}),element('hr','separator')]),
       menuItem('Rename','pencil',()=>nameDialog('Rename project',p.name,value=>change(D.rename_project(workspace,p.id,value),{navigation:true}))),
       element('hr','separator'),menuItem('Delete','trash-2',()=>deleteProject(p)),
     ]),items);root.append(group);

@@ -341,6 +341,21 @@ law sender_is_read:
   {D.sender("%% borzoi from Grok\nflowchart TD\n  A --> B") == "Grok" : String}
 
 # REGRESSION: a new key replaces the old one; a normal project gets none.
+# REGRESSION: a project you made gets an inbox key and keeps its diagrams; other projects don't change.
+law connect_agent_gives_a_key:
+  {D.connect_agent(D.Workspace{[D.Project{1n, "P", [D.Document{2n, "A", "a", Nil{}}], "", ""}, D.Project{3n, "Q", Nil{}, "", ""}], 4n, 1n, 2n, 1}, 1n, "k") ==
+   D.Workspace{[D.Project{1n, "P", [D.Document{2n, "A", "a", Nil{}}], "k", ""}, D.Project{3n, "Q", Nil{}, "", ""}], 4n, 1n, 2n, 1} : D.Workspace}
+
+# REGRESSION: connecting a project that already has a key keeps that key (agents that have it keep working).
+law connect_agent_keeps_a_key:
+  {D.connect_agent(D.Workspace{[D.Project{1n, "P", Nil{}, "k", "m1"}], 2n, 0n, 0n, 1}, 1n, "n") ==
+   D.Workspace{[D.Project{1n, "P", Nil{}, "k", "m1"}], 2n, 0n, 0n, 1} : D.Workspace}
+
+# REGRESSION: once connected, a message becomes a new diagram beside yours.
+law connected_project_receives:
+  {D.receive(D.connect_agent(D.Workspace{[D.Project{1n, "P", [D.Document{2n, "A", "a", Nil{}}], "", ""}], 3n, 1n, 2n, 1}, 1n, "k"), 1n, "k", "m1", "Churn", "flowchart TD", "t") ==
+   D.Workspace{[D.Project{1n, "P", [D.Document{3n, "Churn", "%% borzoi from agent\nflowchart TD", Nil{}}, D.Document{2n, "A", "a", Nil{}}], "k", "m1"}], 4n, 1n, 2n, 1} : D.Workspace}
+
 law new_key_replaces_the_old:
   {D.new_key(D.Workspace{[D.Project{1n, "P", Nil{}, "k", "m1"}, D.Project{2n, "Q", Nil{}, "", ""}], 3n, 0n, 0n, 1}, 1n, "n") ==
    D.Workspace{[D.Project{1n, "P", Nil{}, "n", ""}, D.Project{2n, "Q", Nil{}, "", ""}], 3n, 0n, 0n, 1} : D.Workspace}

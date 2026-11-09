@@ -417,6 +417,19 @@ def new_key(w: Workspace, +project: Nat, key: String) -> Workspace:
   match w:
     case Workspace{ps, next, p, d, mode}: Workspace{rekey_projects(ps, project, key), next, p, d, mode}
 
+# A project you made can receive agent diagrams too: it gets an inbox key. Its diagrams stay as they are,
+# and agents never change them (a message with one of their names becomes a new diagram).
+# A project that already has a key keeps it; New key changes that one.
+def connect_projects(ps: List<&2, Project>, +project: Nat, +key: String) -> List<&2, Project>:
+  match ps:
+    case Nil{}: Nil{}
+    case Project{+i, +n, +ds, +k, +sn} <> t:
+      Bool.pick(Project, Nat.is_eq(i, project) && String.is_empty(k) && Bool.not(String.is_empty(key)), Project{i, n, ds, key, ""}, Project{i, n, ds, k, sn}) <> connect_projects(t, project, key)
+
+def connect_agent(w: Workspace, +project: Nat, key: String) -> Workspace:
+  match w:
+    case Workspace{ps, next, p, d, mode}: Workspace{connect_projects(ps, project, key), next, p, d, mode}
+
 def documents(p: Project) -> List<&2, Document>:
   match p:
     case Project{i, n, ds, k, sn}: ds

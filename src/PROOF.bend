@@ -100,6 +100,9 @@ def L.wrong_key_changes_nothing(): {==}
 def L.normal_project_never_receives(): {==}
 def L.same_message_is_added_once(): {==}
 def L.sender_is_read(): {==}
+def L.connect_agent_gives_a_key(): {==}
+def L.connect_agent_keeps_a_key(): {==}
+def L.connected_project_receives(): {==}
 def L.new_key_replaces_the_old(): {==}
 def L.normal_project_gets_no_key(): {==}
 
