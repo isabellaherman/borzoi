@@ -351,17 +351,60 @@ def deliver_projects(ps: List<&2, Project>, +project: Nat, +id: String, +doc: Do
     case Project{+i, n, ds, k, sn} <> t:
       deliver(Project{i, n, ds, k, sn}, doc, id, Nat.is_eq(i, project)) <> deliver_projects(t, project, id, doc)
 
-def receive_checked(w: Workspace, +project: Nat, +id: String, +title: String, +text: String, ok: Bool) -> Workspace:
-  match w ok:
-    case Workspace{ps, next, p, d, mode} False{}: Workspace{ps, next, p, d, mode}
-    case Workspace{ps, +next, p, d, mode} True{}:
-      Workspace{deliver_projects(ps, project, id, received(next, title, text)), 1n+next, p, d, mode}
+# ---------- An agent updates its own diagram ----------
+# A message whose title names a diagram the agents sent before (it has a sender line) is a newer version of it:
+# the current text goes to history first, so nothing is lost. Your own diagrams are never updated this way;
+# a message with their name becomes a new diagram.
+def is_agent_named(d: Document, +name: String) -> Bool:
+  match d:
+    case Document{i, n, s, h}: String.eq(n, name) && Bool.not(String.is_empty(sender(s)))
 
-# One message from an agent: a new diagram in its project. What is open stays open.
-def receive(w: Workspace, +project: Nat, +key: String, +id: String, +title: String, +text: String) -> Workspace:
+def has_agent_named(ds: List<&2, Document>, +name: String) -> Bool:
+  match ds:
+    case Nil{}: False{}
+    case +d <> t: is_agent_named(d, name) || has_agent_named(t, name)
+
+def refresh(d: Document, +text: String, +stamp: String, selected: Bool) -> Document:
+  match selected:
+    case False{}: d
+    case True{}: checkpoint(edit(checkpoint(d, stamp), text), stamp)
+
+def refresh_documents(ds: List<&2, Document>, +name: String, +text: String, +stamp: String) -> List<&2, Document>:
+  match ds:
+    case Nil{}: Nil{}
+    case +d <> t: refresh(d, text, stamp, is_agent_named(d, name)) <> refresh_documents(t, name, text, stamp)
+
+def refresh_project(p: Project, +name: String, +text: String, +stamp: String, +id: String, selected: Bool) -> Project:
+  match p selected:
+    case Project{i, n, ds, k, sn} False{}: Project{i, n, ds, k, sn}
+    case Project{i, n, ds, k, sn} True{}: Project{i, n, refresh_documents(ds, name, text, stamp), k, id}
+
+def refresh_projects(ps: List<&2, Project>, +project: Nat, +name: String, +text: String, +stamp: String, +id: String) -> List<&2, Project>:
+  match ps:
+    case Nil{}: Nil{}
+    case Project{+i, n, ds, k, sn} <> t:
+      refresh_project(Project{i, n, ds, k, sn}, name, text, stamp, id, Nat.is_eq(i, project)) <> refresh_projects(t, project, name, text, stamp, id)
+
+def updates_existing(ps: List<&2, Project>, +project: Nat, +name: String) -> Bool:
+  match ps:
+    case Nil{}: False{}
+    case Project{i, n, ds, k, sn} <> t: (Nat.is_eq(i, project) && has_agent_named(ds, name)) || updates_existing(t, project, name)
+
+def receive_checked(w: Workspace, +project: Nat, +id: String, +title: String, +text: String, +stamp: String, ok: Bool, update: Bool) -> Workspace:
+  match w ok update:
+    case Workspace{ps, next, p, d, mode} False{} False{}: Workspace{ps, next, p, d, mode}
+    case Workspace{ps, next, p, d, mode} False{} True{}: Workspace{ps, next, p, d, mode}
+    case Workspace{ps, +next, p, d, mode} True{} False{}:
+      Workspace{deliver_projects(ps, project, id, received(next, title, text)), 1n+next, p, d, mode}
+    case Workspace{ps, next, p, d, mode} True{} True{}:
+      Workspace{refresh_projects(ps, project, received_name(title), String.take(marked(text), 9000n), stamp, id), next, p, d, mode}
+
+# One message from an agent: a new diagram in its project, or a newer version of a diagram it sent before
+# (same title). What is open stays open.
+def receive(w: Workspace, +project: Nat, +key: String, +id: String, +title: String, +text: String, +stamp: String) -> Workspace:
   match w:
     case Workspace{+ps, next, p, d, mode}:
-      receive_checked(Workspace{ps, next, p, d, mode}, project, id, title, text, can_receive(ps, project, key, id))
+      receive_checked(Workspace{ps, next, p, d, mode}, project, id, title, text, stamp, can_receive(ps, project, key, id), updates_existing(ps, project, received_name(title)))
 
 # A new key: the old one stops working. Only an agent project has one to change.
 def rekey_projects(ps: List<&2, Project>, +project: Nat, +key: String) -> List<&2, Project>:

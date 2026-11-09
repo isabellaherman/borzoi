@@ -287,23 +287,23 @@ law message_keeps_every_diagram:
 
 # REGRESSION: a message becomes one new diagram, marked as sent by an agent; what is open stays open.
 law message_adds_one_diagram:
-  {D.receive(D.Workspace{[D.Project{1n, "P", [D.Document{2n, "A", "a", Nil{}}], "k", ""}], 3n, 1n, 2n, 1}, 1n, "k", "m1", "Churn", "flowchart TD") ==
+  {D.receive(D.Workspace{[D.Project{1n, "P", [D.Document{2n, "A", "a", Nil{}}], "k", ""}], 3n, 1n, 2n, 1}, 1n, "k", "m1", "Churn", "flowchart TD", "t") ==
    D.Workspace{[D.Project{1n, "P", [D.Document{3n, "Churn", "%% borzoi from agent\nflowchart TD", Nil{}}, D.Document{2n, "A", "a", Nil{}}], "k", "m1"}], 4n, 1n, 2n, 1} : D.Workspace}
 
 # REGRESSION: a wrong key changes nothing.
 law wrong_key_changes_nothing:
-  {D.receive(D.Workspace{[D.Project{1n, "P", Nil{}, "k", ""}], 2n, 0n, 0n, 1}, 1n, "x", "m1", "T", "flowchart TD") ==
+  {D.receive(D.Workspace{[D.Project{1n, "P", Nil{}, "k", ""}], 2n, 0n, 0n, 1}, 1n, "x", "m1", "T", "flowchart TD", "t") ==
    D.Workspace{[D.Project{1n, "P", Nil{}, "k", ""}], 2n, 0n, 0n, 1} : D.Workspace}
 
 # REGRESSION: a normal project (no key) never receives.
 law normal_project_never_receives:
-  {D.receive(D.Workspace{[D.Project{1n, "P", Nil{}, "", ""}], 2n, 0n, 0n, 1}, 1n, "", "m1", "T", "flowchart TD") ==
+  {D.receive(D.Workspace{[D.Project{1n, "P", Nil{}, "", ""}], 2n, 0n, 0n, 1}, 1n, "", "m1", "T", "flowchart TD", "t") ==
    D.Workspace{[D.Project{1n, "P", Nil{}, "", ""}], 2n, 0n, 0n, 1} : D.Workspace}
 
 # REGRESSION: the same message is added once.
 law same_message_is_added_once:
-  {D.receive(D.receive(D.Workspace{[D.Project{1n, "P", Nil{}, "k", ""}], 2n, 0n, 0n, 1}, 1n, "k", "m1", "T", "flowchart TD"), 1n, "k", "m1", "T", "flowchart TD") ==
-   D.receive(D.Workspace{[D.Project{1n, "P", Nil{}, "k", ""}], 2n, 0n, 0n, 1}, 1n, "k", "m1", "T", "flowchart TD") : D.Workspace}
+  {D.receive(D.receive(D.Workspace{[D.Project{1n, "P", Nil{}, "k", ""}], 2n, 0n, 0n, 1}, 1n, "k", "m1", "T", "flowchart TD", "t"), 1n, "k", "m1", "T", "flowchart TD", "t") ==
+   D.receive(D.Workspace{[D.Project{1n, "P", Nil{}, "k", ""}], 2n, 0n, 0n, 1}, 1n, "k", "m1", "T", "flowchart TD", "t") : D.Workspace}
 
 # REGRESSION: the sender's own name is kept and read back.
 law sender_is_read:
@@ -317,3 +317,27 @@ law new_key_replaces_the_old:
 law normal_project_gets_no_key:
   {D.new_key(D.Workspace{[D.Project{2n, "Q", Nil{}, "", ""}], 3n, 0n, 0n, 1}, 2n, "n") ==
    D.Workspace{[D.Project{2n, "Q", Nil{}, "", ""}], 3n, 0n, 0n, 1} : D.Workspace}
+
+# UNIVERSAL: an update for another diagram leaves it exactly as it was.
+law update_skips_other_diagrams:
+  for +d: D.Document
+  for text: String
+  for stamp: String
+  {D.refresh(d, text, stamp, False{}) == d : D.Document}
+
+# UNIVERSAL: an update shows the agent's new text.
+law update_shows_the_new_text:
+  for d: D.Document
+  for +text: String
+  for +stamp: String
+  {D.source(D.refresh(d, text, stamp, True{})) == text : String}
+
+# REGRESSION: the same title updates the agent's diagram; the old text is kept in its history.
+law same_title_updates_with_history:
+  {D.receive(D.Workspace{[D.Project{1n, "P", [D.Document{2n, "Churn", "%% borzoi from Grok\nflowchart TD", Nil{}}], "k", "m1"}], 3n, 1n, 2n, 1}, 1n, "k", "m2", "Churn", "%% borzoi from Grok\nflowchart TD\n  A --> B", "t") ==
+   D.Workspace{[D.Project{1n, "P", [D.Document{2n, "Churn", "%% borzoi from Grok\nflowchart TD\n  A --> B", [D.Version{"%% borzoi from Grok\nflowchart TD\n  A --> B", "t"}, D.Version{"%% borzoi from Grok\nflowchart TD", "t"}]}], "k", "m2"}], 3n, 1n, 2n, 1} : D.Workspace}
+
+# REGRESSION: your own diagram is never updated by an agent; a message with its name becomes a new diagram.
+law your_diagram_is_never_updated:
+  {D.receive(D.Workspace{[D.Project{1n, "P", [D.Document{2n, "Churn", "flowchart TD", Nil{}}], "k", ""}], 3n, 1n, 2n, 1}, 1n, "k", "m1", "Churn", "flowchart TD", "t") ==
+   D.Workspace{[D.Project{1n, "P", [D.Document{3n, "Churn", "%% borzoi from agent\nflowchart TD", Nil{}}, D.Document{2n, "Churn", "flowchart TD", Nil{}}], "k", "m1"}], 4n, 1n, 2n, 1} : D.Workspace}

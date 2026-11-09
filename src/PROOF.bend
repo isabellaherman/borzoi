@@ -95,3 +95,12 @@ def L.same_message_is_added_once(): {==}
 def L.sender_is_read(): {==}
 def L.new_key_replaces_the_old(): {==}
 def L.normal_project_gets_no_key(): {==}
+
+def L.update_skips_other_diagrams(d, text, stamp): {==}
+
+def L.update_shows_the_new_text(d, text, stamp):
+  match d:
+    case D.Document{i, n, s, h}: {==}
+
+def L.same_title_updates_with_history(): {==}
+def L.your_diagram_is_never_updated(): {==}
