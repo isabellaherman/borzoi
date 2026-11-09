@@ -7,7 +7,7 @@
   <title>Borzoi — Diagrams</title>
   <script type="module" src="./src/main.js"></script>
 </head>
-<body class="desk">
+<body class="desk" data-radius="pill">
   <div class="window is-full" id="app">
     <aside class="side is-open" id="sidebar" aria-label="Projects" data-side-multiple>
       <div class="side__head"><span class="side__label item-title side__text">Borzoi</span></div>
@@ -27,7 +27,7 @@
                 <span class="toolbar__spacer"></span><span id="save-status" class="detail status-text hide-narrow" role="status">Saved locally</span><button class="btn btn--ghost btn--sm" id="history">History</button>
       </header>
       <div class="toolbar" role="toolbar" aria-label="Diagram">
-        <div class="dropdown" id="mode"><button class="btn btn--ghost btn--sm" id="mode-trigger" aria-haspopup="menu" aria-expanded="false">Edit mode</button><div class="menu" role="menu" hidden></div></div><button class="btn btn--ghost btn--sm" id="add-node"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>Add node</button><button class="btn btn--ghost btn--icon btn--round" id="layout" aria-pressed="false" aria-label="Manual layout" hidden><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg><svg class="status-ring" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="19" pathLength="100"/></svg></button>
+        <div class="dropdown" id="mode"><button class="btn btn--ghost btn--sm" id="mode-trigger" aria-haspopup="menu" aria-expanded="false">Edit mode</button><div class="menu" role="menu" hidden></div></div><button class="btn btn--filled btn--sm" id="add-node"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>Add node</button><button class="btn btn--ghost btn--icon btn--round" id="layout" aria-pressed="false" aria-label="Manual layout" hidden><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg><svg class="status-ring" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="19" pathLength="100"/></svg></button>
         <span class="toolbar__spacer"></span><span id="manual-note" hidden><span class="tag tag--warning">Manual layout · positions in %% lines</span><button class="btn btn--ghost btn--sm" id="why">Why?</button></span><span class="detail status-text hide-narrow" id="graph-stats"></span><span class="toolbar__sep" id="actions-separator"></span><button class="btn btn--ghost btn--sm" id="checkpoint"><span class="btn__swap" aria-hidden="true"><svg class="icon" aria-hidden="true"><use href="#i-circle-check"/></svg><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>Save version</button><button class="btn btn--ghost btn--sm" id="export"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>Export .mmd</button>
       </div>
       <main class="page" id="canvas-scroll" aria-label="Diagram"><div class="workbench">
