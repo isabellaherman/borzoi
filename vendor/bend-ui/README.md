@@ -275,6 +275,8 @@ mountDiagram(el, {
 
 A node's `tone` is `accent`, `success`, `warning`, `danger`, or none (neutral); `tag` is a short word on it. Two looks: a colored border (default), or add `diagram--soft` to `el` for a soft fill with the tone in the text. Arrows with the same ends become one line, their labels joined.
 
+Order: on each row a node sits under the nodes it comes from (the average place of its parents, row by row from the top; ties keep your order), so a parent's children stay together and arrows cross less (`DIAGRAM.bend`: `order`). An arrow's words sit at the middle of its line, or slide along it to the first place that covers no node and no other words (`label_tries`, `covers`).
+
 Loops: an arrow that closes a loop (its end already leads back to its start, or a node pointing to itself) is a return arrow. Arrows are read in order, so the one that closes the loop is the return one. It doesn't push rows, so a loop never pushes its nodes down; it is drawn going back up on the diagram's nearer side, beside the forward arrows and never over them (`DIAGRAM.bend`: `back`). A node that points to itself gets a small loop into its top. Which arrows are allowed stays the app's choice.
 
 Connect (optional): pass `{ isValidConnection, onConnect }` as a third argument. Drag the dot under a node onto another node; both get `{ source, target }` (node indexes). The diagram doesn't change itself: add the edge to your data and draw again in the same element; the nodes glide to their new places and the new arrow runs in.
@@ -294,7 +296,7 @@ Rename (optional): pass `onLabelEdit: (i, label) => …`. A double-click on a no
 
 Motion follows what changed, with `MOTION.bend` and the duration tokens: a new node grows out of the node it comes from, a new arrow runs in, a renamed node takes its width while the others make room, and `await d.leave(i)` shrinks a node away before you draw without it. Reduced motion turns it all off.
 
-Size: a node is at least `diagram_node_min` wide (128) and grows in `diagram_node_step` steps (24), so short labels don't become chips (`DIAGRAM.bend`: `node_width`). On a narrow screen the diagram keeps its size; put it in a container that scrolls.
+Size: a node is at least `diagram_node_min` wide (128) and grows in `diagram_node_step` steps (24), so short labels don't become chips (`DIAGRAM.bend`: `node_width`). The diagram is never narrower than its widest row, so a wide row makes it wider instead of cutting nodes off; put it in a container that scrolls (an `.area` does).
 
 Accessibility (WCAG 2.2 AA): name the diagram with `label: "…"`. Each node tells screen readers its tone and where its arrows go and come from. Lines and borders are at 3:1 or more and soft text at 4.5:1 or more. Changes are announced in a polite live region: the diagram announces renames and drag connects, and `announce(text)` (exported) is for your own changes. `d.focusAfterDraw(label)` puts the focus back on a node after you draw again. Dragging must always have another way: offer "Connect to …" in the node menu, and in free layout `Shift` + an arrow moves the focused node one step.
 
@@ -324,12 +326,12 @@ Pie, bars, line and area: one mark each, no card around them. `CHART.bend` place
 
 ```js
 import { mountPie, mountBars, mountLine, mountArea } from "bend-ui/chart";
-mountPie(el, [{ label: "Fire", value: 46 }, { label: "Air", value: 10 }]);
+mountPie(el, [{ label: "Fire", value: 46 }, { label: "Air", value: 10 }], { label: "Spells by school" });
 const bars = mountBars(el, [{ label: "Mon", value: 42 }]);
 bars.replay();   // the entrance again; also draw() and destroy()
 ```
 
-A pie takes up to 4 slices; line and area take the same points as bars. Colors are tones of the accent (`--chart-1` to `--chart-4`), so `theme({ accent })` recolors every chart. A pie takes two looks on `el`: `chart--split` (a gap between slices) and `chart--donut` (a hole). Pointing at a mark keeps it and dims the rest; line and area show the thread's node on the point.
+A pie takes up to 4 slices; line and area take the same points as bars. Colors are tones of the accent (`--chart-1` to `--chart-4`), so `theme({ accent })` recolors every chart. Three sizes on `el`: `chart--sm`, none (md) and `chart--lg` (160, 240, 320: the plot's height, the pie's width). A pie takes `chart--donut` (a hole) and `chart--soft` (lighter tones, each slice outlined in the accent); a hairline of surface always parts the slices. The four tones all pass 3:1 against the page (WCAG 1.4.11): two lighter and two darker around the accent. The area's fill stays light: it is a ground under the line, and the line carries the values. Name the chart with `{ label }` (the third argument), and a screen reader hears it before the values. Pointing at a mark keeps it and dims the rest; line and area show the thread's node on the point.
 
 ## Disclosure
 
@@ -355,16 +357,21 @@ highlight(document.querySelector(".prose pre"), "html");     // color only, as b
 
 ## Responsive
 
-Below `breakpoint()` in `TOKENS.bend` (720px), `ui.js` sets `<html data-narrow>`, and the components adapt: the window fills the screen, the side bar becomes a drawer. CSS can't read variables in media queries, so the breakpoint lives in Bend and nowhere else.
+Below `breakpoint()` in `TOKENS.bend` (720px), `ui.js` sets `<html data-narrow>`: the window fills the screen and the side bar becomes a drawer. CSS can't read variables in media queries, so the breakpoint lives in Bend and nowhere else.
+
+An `.area` does the same for the room it has, not the screen: below the breakpoint of its own width (`AREA.bend`: `narrow`) it gets `data-narrow`, and the components inside follow it. Form columns stack, an inline label goes above, a pair stacks, the toolbar scrolls, `hide-narrow` and `only-narrow` swap. What can't reflow scrolls inside the area; nothing spills over its neighbors. `initArea(el)` for an area added later.
 
 | Class | |
 |---|---|
-| `hide-narrow` | hidden on narrow screens |
-| `only-narrow` | shown only on narrow screens |
+| `area` | a region that knows its own width |
+| `hide-narrow` | hidden on narrow screens and in narrow areas |
+| `only-narrow` | shown only on narrow screens and in narrow areas |
 
 ```html
-<span class="tag hide-narrow">wide</span>
-<span class="tag only-narrow">narrow</span>
+<div class="area">
+  <span class="tag hide-narrow">wide</span>
+  <span class="tag only-narrow">narrow</span>
+</div>
 ```
 
 ## Agent
@@ -523,10 +530,10 @@ form.addEventListener("send", async (e) => { await save(e.detail.data); e.detail
 </ol>
 ```
 
-### Art
+### Image
 
 ```html
-<img class="art art--sm" src="…" alt="">
+<img class="image image--sm" src="…" alt="">
 ```
 
 ### Panel
@@ -620,7 +627,7 @@ Row actions: wrap an item (or a section's toggle) in a `.side__row` with a `.dro
 | Components | `page`, `doc`, `pair`, `thread` + `node`, `chat` + `msg` + `composer`, `disclosure`, `form`, `link`, `dropdown` + `menu`, `btn` (`--primary`, `--ghost`, `--sm`, `--lg`, `--icon`, `--round`, `:disabled`, `[aria-current]`), `input`, `field`, `segmented` (`--icons`), `panel`, `toolbar`, `tag`, `kbd`, `icon`, `rows`/`row`, `art`, `dot`, `status-ring`, `block`, `prose`, `side`, `window`, `agent`, `diagram`, `chart` |
 | Text | `display`, `heading`, `lead`, `text`, `list`, `meta`, `mono` |
 | Icons | plus, arrow-up, shield, github, file-text, scale, triangle-alert, circle-check, x, chevron-down, list, code, wand-sparkles, search, panel-left, book-open, lock, minimize-2, maximize-2, minimize, maximize, text, rows-2, columns-2, heading-1, pilcrow, check |
-| Tokens | space, radius, type, controls, icons, art, status, side bar, window, agent, chat, chart, motion, color (light theme) |
+| Tokens | space, radius, type, controls, icons, image, status, side bar, window, agent, chat, chart, motion, color (light theme) |
 
 See everything: https://isabellaherman.github.io/Bend-UI/ (or `bun run docs`). After changing the docs, `bun run site` rebuilds `site/`; pushing it publishes the page.
 

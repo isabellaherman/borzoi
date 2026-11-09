@@ -1,5 +1,58 @@
 # Changelog
 
+## 1.1.5 (2026-11-09)
+
+- **Chart colors pass AA**: the four tones are two lighter and two darker around the accent (`chart_tone_1..4`: 100, 75 toward the surface, 80 and 60 toward the text), each 3:1 or more on the page (5.43, 3.24, 6.94, 8.88; were 5.43, 2.70, 1.73, 1.30). Close to the accent on purpose: protected, not extreme. A hairline of surface always parts a pie's slices, so `.chart--split` is gone.
+- **`.chart--soft`**: the lighter tones (`chart_soft_2..4`: 66, 40, 22), each slice outlined in the accent (5.43:1), like `.diagram--soft`. It passes AA too; the lib has no look that doesn't.
+- **Sizes**: `.chart--sm`, none (md) and `.chart--lg`: 160, 240 and 320, the plot's height and the pie's width (`chart_sm`, `chart_md`, `chart_lg`; it no longer borrows `image_lg`).
+- **A name**: `mountPie`, `mountBars`, `mountLine` and `mountArea` take `{ label }`; a screen reader hears it before the values.
+- Percentages in the legend and axis numbers are a little darker (`chart_ink`: text-2 mixed 55% into text-3), the gentlest ink that gives small text 4.5:1 (were text-3, 3.21:1). Bars, lines and their colors don't change. The legend keeps its layout, and the area's fill keeps its light tones (it is a ground under the line, which carries the values).
+- Docs: the Chart Playground gets Size, and Look is Plain, Donut, Soft, Soft donut. Accessibility: 5 of 7 pass (keyboard for bars and points, and a table for screen readers, are next).
+
+## 1.1.4 (2026-11-09)
+
+- New icon: `chart-column` (Lucide).
+- Docs: the **Chart** page in the standard format. A Playground: Type (Pie, Bars, Line, Area), Look (Plain, Split, Donut, Donut split; shown only for a pie) and Entrance (Play) on the right, one chart on the stage. The fixed widths written into the page are gone. Accessibility, collapsed: 2 of 7 pass. Contrast fails: three of the four tones are under 3:1 on the page, and axis ticks are 3.21:1. Keyboard and the chart's name are partial. Nothing else in the lib changes.
+
+## 1.1.3 (2026-11-09)
+
+- **Art is now Image**: `.art` → `.image` (`.image--sm`, `--lg`, `--empty`, `--fill`), tokens `art_sm/md/lg` → `image_sm/md/lg`, CSS variables `--art-*` → `--image-*` (the chart's plot height reads `--image-lg`). Same values and look. An app that used `.art` renames its classes.
+- Docs: the **Image** page (was Art, now in the side bar after Form) has a Playground: Size (sm, md, lg) and Width (Natural, Fill) on the right, one image on the stage. Panel and Pages use `.image`; Pages' Content filter says Images.
+
+## 1.1.2 (2026-11-09)
+
+Three diagram layout fixes, from real agent diagrams in Borzoi 1.1.0.
+
+- **A wide row is never cut off**: `.diagram` is never narrower than its widest row (`min-width: max-content`), so a row wider than its container widens the diagram and the container scrolls over all of it. Before, a centered row ran past both edges and its first nodes sat left of where scrolling can reach.
+- **Children sit under their parents** (`DIAGRAM.bend`: `order`): rows are ordered top to bottom, each node by the average place of its parents (compared without dividing); ties keep the given order. A parent's children stay together and arrows cross less (the Borzoi map: 6 crossings → 0, counted as straight lines).
+- **Arrow words never cover each other** (`DIAGRAM.bend`: `label_tries`, `covers`): an arrow's words sit at the middle of its line, or slide along it to the first place that covers no node and no words already placed.
+- Known limit: an arrow that skips a row can still pass beside a node on the row it skips.
+
+## 1.1.1 (2026-11-09)
+
+- **Area** (`.area`): a region that knows its own width. Below `breakpoint` of its own width (`AREA.bend`: `narrow`) it gets `data-narrow`, and the components inside follow the room they have, not the screen. Form columns stack, an inline label goes above, a split pair stacks, `.doc`, `.chat` and `.composer` take their narrow padding, `.hide-narrow` / `.only-narrow` swap, the toolbar scrolls. What can't reflow scrolls inside the area; nothing spills over its neighbors. Window and side bar still follow the screen. `initArea(el)` is exported. No new token (reuses `breakpoint`), no new law.
+- The component rules that read `html[data-narrow]` now read `[data-narrow]`, so they follow the nearest narrow area as well as a narrow screen.
+- **Segmented**: an item's text never wraps (its height is fixed).
+- Docs: every Playground stage is an area, so a big pick (Button xl + Wide, Diagram's grid) scrolls inside the stage instead of running over the controls. The Responsive page has a Playground: one area at 320, 576 or full width. Agent's Action is a pill dropdown (five options don't fit the column) and in a narrow area its two agents stack, so the small one's options never open over the large one. The Rows and Toolbar demos lose their inline widths. Measured at 1280, 1024 and 390px with every option of every control: nothing spills.
+
+## 1.1.0 (2026-11-09)
+
+- **10 new icons** (Lucide): `square-round-corner`, `ruler`, `move-horizontal`, `toggle-right`, `tag`, `move`, `list-ordered`, `text-wrap`, `play`, `mouse-pointer-click`.
+- Docs: the visual standard for every page. Every Playground puts its stage on the left and its controls in a column on the right (320px, `space_8 × 5`). Each control is a lib `.field`: an icon and its name above it, the same icon for the same kind of control on every page. On narrow screens the controls go above the stage, side by side. Code block's Language (12 options) and Input's State (6) are a pill dropdown, since they don't fit the column. Segmented, field and dropdown don't change.
+
+## 1.0.34 (2026-11-09)
+
+- Docs: every segmented that drives a page (the filters, Agent's Action and Open, Pages, Pair, Panel, Prose) is now a pill with the spring thumb (`.segmented--slide`, `data-motion="spring"`, `data-radius="pill"`). The Segmented page's own previews still follow its Shape and Animation filters. Nothing in the lib changes.
+
+## 1.0.33 (2026-11-09)
+
+- **Code block inside prose** keeps its own look: `.prose` styles a bare `<pre>` and inline `<code>`, no longer a code block's (no box inside the box, no inline-code ground on its lines).
+- Docs: the Overview's Install, Import and Use code blocks are colored once again (they were colored twice, which broke them into one word per line).
+
+## 1.0.32 (2026-11-09)
+
+- Docs: **Accessibility** is its own page (`/accessibility`), next to Overview in the side bar. It holds what the Overview said: the three layers, how components are reviewed, and the sources. The Overview no longer has that section; each component's page keeps its own accessibility list. Nothing in the lib changes.
+
 ## 1.0.31 (2026-11-09)
 
 - **Diagram loops**: an arrow that closes a loop (its end already leads back to its start, or a node pointing to itself) is a return arrow (`DIAGRAM.bend`: `back`, read in order). Rows are the longest path over the other arrows only, so a loop no longer pushes its nodes down (A→B→A was rows 7, 0, 6; now 1, 0, 2). Every arrow is still drawn: a return arrow goes back up on the diagram's nearer side, beside the forward arrows and never over them; a node pointing to itself gets a small loop into its top. Drawing only: which arrows are allowed stays the app's choice.

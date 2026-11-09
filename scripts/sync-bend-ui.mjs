@@ -6,7 +6,7 @@ import {spawnSync} from 'node:child_process';
 const source=resolve(process.argv[2]??'../../Bend-UI');
 const checked=spawnSync('bend',['PROOF.bend'],{cwd:source,stdio:'inherit'});
 if(checked.status!==0)throw new Error('Source library proofs failed; snapshot unchanged.');
-const names=['DIAGRAM.bend','ICONS-LICENSE','KEYS.bend','LAWS.bend','MENU.bend','MOTION.bend','PROOF.bend','README.md','SPEC.bend','TOKENS.bend','diagram.js','icons.js','keys.js','package.json','ui.css','ui.js','WORKSPACE.bend','WORKSPACE_LAWS.bend','WORKSPACE_PROOF.bend','workspace.js','workspace.css','CHANGELOG.md','docs/BORZOI-NEEDS.md','docs/workspace.html','docs/workspace.js'];
+const names=['AREA.bend','DIAGRAM.bend','ICONS-LICENSE','KEYS.bend','LAWS.bend','MENU.bend','MOTION.bend','PROOF.bend','README.md','SPEC.bend','TOKENS.bend','diagram.js','icons.js','keys.js','package.json','ui.css','ui.js','WORKSPACE.bend','WORKSPACE_LAWS.bend','WORKSPACE_PROOF.bend','workspace.js','workspace.css','CHANGELOG.md','docs/BORZOI-NEEDS.md','docs/workspace.html','docs/workspace.js'];
 const files={};
 for(const name of names){
   const from=resolve(source,name),to=resolve('vendor/bend-ui',name);

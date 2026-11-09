@@ -18,8 +18,8 @@ body {
 }
 
 /* ---------- Responsive utilities ---------- */
-html[data-narrow] .hide-narrow { display: none !important; }
-html:not([data-narrow]) .only-narrow { display: none !important; }
+[data-narrow] .hide-narrow, .hide-narrow[data-narrow] { display: none !important; }
+.only-narrow:not([data-narrow] *, [data-narrow]) { display: none !important; }
 
 /* ---------- Button ----------
    Horizontal padding (12) larger than vertical (set by the height):
@@ -239,13 +239,13 @@ textarea.input { display: block; width: 100%; height: auto; min-height: var(--te
 .form__legend { padding: 0; margin-bottom: var(--space-1); font-size: var(--role-item); font-weight: var(--weight-medium); color: var(--text); }
 .form__row { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--form-gap); }
 .form--columns .form__row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-html[data-narrow] .form--columns .form__row { grid-template-columns: minmax(0, 1fr); }
+[data-narrow] .form--columns .form__row { grid-template-columns: minmax(0, 1fr); }
 .form--inline .field { display: grid; grid-template-columns: var(--form-label-width) minmax(0, 1fr); column-gap: var(--space-4); row-gap: var(--space-1); align-items: start; }
 .form--inline .field__label { padding-top: calc((var(--control-md) - var(--text-sm) * var(--leading-ui)) / 2); }
 .form--inline .field > :not(.field__label) { grid-column: 2; }
 .form--inline .form__legend { margin-left: calc(var(--form-label-width) + var(--space-4)); }
-html[data-narrow] .form--inline .field { display: flex; flex-direction: column; }
-html[data-narrow] .form--inline .form__legend { margin-left: 0; }
+[data-narrow] .form--inline .field { display: flex; flex-direction: column; }
+[data-narrow] .form--inline .form__legend { margin-left: 0; }
 .form__summary { display: flex; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: var(--border-width) solid var(--danger); border-radius: var(--radius-md); background: var(--danger-soft); color: var(--text); }
 .form__summary > .icon { flex: none; color: var(--danger); margin-top: var(--space-hairline); }
 .form__summary ul { margin: var(--space-1) 0 0; padding-left: var(--space-4); }
@@ -265,6 +265,7 @@ html[data-narrow] .form--inline .form__legend { margin-left: 0; }
 }
 .segmented button {
   height: var(--segmented-item);
+  white-space: nowrap;
   padding: 0 var(--space-3);
   border: 0;
   border-radius: var(--seg-radius-inner);
@@ -450,6 +451,10 @@ html[data-narrow] .form--inline .form__legend { margin-left: 0; }
 .prose code { font-family: var(--font-mono); font-size: var(--text-sm); background: var(--surface-2); border-radius: var(--radius-sm); padding: 0 var(--space-1); }
 .prose pre { margin: 0 0 var(--space-3); padding: var(--space-3); background: var(--surface-2); border: var(--border-width) solid var(--border); border-radius: var(--radius-md); overflow: auto; }
 .prose pre code { background: none; padding: 0; }
+/* A code block inside prose keeps its own look: prose styles a bare <pre> and inline <code>, not a code block's. */
+.prose .code-block { margin: 0 0 var(--space-3); }
+.prose .code-block__pre { margin: 0; padding: var(--space-3) 0; background: none; border: 0; border-radius: 0; }
+.prose .code-block code { background: none; padding: 0; border-radius: 0; font-size: inherit; }
 
 /* ---------- Syntax: code in color (Snow) ----------
    Add .syntax to a code box (.prose pre, or a .block--code); syntax.js cuts its text into pieces (SYNTAX.bend)
@@ -523,15 +528,15 @@ html[data-narrow] .form--inline .form__legend { margin-left: 0; }
 .row__meta { font-size: var(--text-sm); color: var(--text-3); white-space: nowrap; }
 a.row:hover .row__title { color: var(--text-2); text-decoration: underline; text-underline-offset: var(--underline-offset); text-decoration-thickness: var(--underline-width); }
 
-/* ---------- Art: a game/product image, never distorted ---------- */
-.art { display: block; width: auto; height: var(--art-md); max-width: 100%; object-fit: contain; flex: none; user-select: none; -webkit-user-drag: none; }
-.art--sm { height: var(--art-sm); }
-.art--lg { height: var(--art-lg); }
-/* An art with no image yet: the image symbol on a quiet ground, at the same heights (sm, md, lg).
-   <div class="art art--empty" role="img" aria-label="Image"><svg class="icon icon--lg"><use href="#i-image"/></svg></div>
-   It is 4:3; .art--fill makes it take the width it is given (a doc's column, a grid's cell). */
-.art--empty { display: grid; place-items: center; aspect-ratio: 4 / 3; background: var(--surface-2); border-radius: var(--radius-md); color: var(--text-3); }
-.art--empty.art--fill { width: 100%; aspect-ratio: auto; }
+/* ---------- Image: a game or product picture, never distorted ---------- */
+.image { display: block; width: auto; height: var(--image-md); max-width: 100%; object-fit: contain; flex: none; user-select: none; -webkit-user-drag: none; }
+.image--sm { height: var(--image-sm); }
+.image--lg { height: var(--image-lg); }
+/* An image not there yet: the image symbol on a quiet ground, at the same heights (sm, md, lg).
+   <div class="image image--empty" role="img" aria-label="Image"><svg class="icon icon--lg"><use href="#i-image"/></svg></div>
+   It is 4:3; .image--fill makes it take the width it is given (a doc's column, a grid's cell). */
+.image--empty { display: grid; place-items: center; aspect-ratio: 4 / 3; background: var(--surface-2); border-radius: var(--radius-md); color: var(--text-3); }
+.image--empty.image--fill { width: 100%; aspect-ratio: auto; }
 
 /* ---------- Dot: a state beside a line. Not a toggle: each state is a color. ---------- */
 .dot {
@@ -611,7 +616,7 @@ a.row:hover .row__title { color: var(--text-2); text-decoration: underline; text
   flex-direction: column;
   gap: var(--space-hairline);
 }
-html[data-narrow] .doc { padding: var(--space-5) var(--space-3) var(--space-8); }
+[data-narrow] .doc { padding: var(--space-5) var(--space-3) var(--space-8); }
 .doc--wide { max-width: var(--window-max); }
 .doc--full { max-width: none; }   /* the whole page, less the gutters (the doc's padding) */
 .doc__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: 0 var(--space-2) var(--space-2); }
@@ -658,7 +663,9 @@ html[data-narrow] .doc { padding: var(--space-5) var(--space-3) var(--space-8); 
    A node takes a tone: .diagram__node--accent, --success, --warning, --danger (neutral without one).
    Two looks: a colored border (the default), or .diagram--soft on the diagram.
    Like Mermaid's flowchart TD and Unity's Animator, but the layout is Bend's and the look is the tokens. */
-.diagram { position: relative; display: flex; flex-direction: column; gap: var(--space-7); padding: var(--space-4) var(--space-2); }
+/* Never narrower than its widest row: a wide row makes the diagram wider (its container scrolls), so no node
+   is ever cut off on the left where scrolling can't reach. */
+.diagram { position: relative; display: flex; flex-direction: column; gap: var(--space-7); padding: var(--space-4) var(--space-2); min-width: max-content; }
 .diagram__row { position: relative; z-index: var(--layer-part); display: flex; justify-content: center; align-items: flex-start; gap: var(--space-5); }
 .diagram__node {
   position: relative;
@@ -689,13 +696,15 @@ html[data-narrow] .doc { padding: var(--space-5) var(--space-3) var(--space-8); 
    chart.js fills <div class="chart">: mountPie, mountBars, mountLine, mountArea. Where every mark goes
    comes from CHART.bend; the motion is MOTION.bend and the duration tokens.
    Colors are tones of the accent (--chart-1 … --chart-4), so theme({ accent }) recolors every chart.
-   The pie takes two looks: .chart--donut (a hole), .chart--split (the surface shows between slices).
+   Sizes: .chart--sm, .chart--lg (chart_sm, chart_md, chart_lg). The pie: .chart--donut (a hole), .chart--soft (lighter
+   tones, outlined in the accent). A hairline of surface always parts the slices, so each one has 3:1 against the page.
    Line and area reuse the thread's pieces: its weight, its glow, its glint and its .node. */
 .chart {
   --chart-1: color-mix(in oklch, var(--accent) var(--chart-tone-1), var(--surface));
   --chart-2: color-mix(in oklch, var(--accent) var(--chart-tone-2), var(--surface));
-  --chart-3: color-mix(in oklch, var(--accent) var(--chart-tone-3), var(--surface));
-  --chart-4: color-mix(in oklch, var(--accent) var(--chart-tone-4), var(--surface));
+  --chart-3: color-mix(in oklch, var(--accent) var(--chart-tone-3), var(--text));
+  --chart-4: color-mix(in oklch, var(--accent) var(--chart-tone-4), var(--text));
+  --chart-size: var(--chart-md);
   display: grid;
   justify-items: center;
   gap: var(--space-4);
@@ -706,8 +715,10 @@ html[data-narrow] .doc { padding: var(--space-5) var(--space-3) var(--space-8); 
 .chart [data-series="4"] { --series: var(--chart-4); }
 
 .chart__box { position: relative; width: 100%; }
-.chart__plot { display: block; width: 100%; height: var(--art-lg); overflow: visible; }
-.chart--pie .chart__box { max-width: var(--art-lg); }
+.chart--sm { --chart-size: var(--chart-sm); }
+.chart--lg { --chart-size: var(--chart-lg); }
+.chart__plot { display: block; width: 100%; height: var(--chart-size); overflow: visible; }
+.chart--pie .chart__box { width: var(--chart-size); max-width: 100%; }
 .chart--pie .chart__plot { height: auto; aspect-ratio: 1; }
 
 /* Pointing: the pointed mark stays, the rest dim. */
@@ -719,23 +730,31 @@ html[data-narrow] .doc { padding: var(--space-5) var(--space-3) var(--space-8); 
 .chart__slice {
   fill: var(--series);
   stroke: var(--surface);
-  stroke-width: 0;
+  stroke-width: var(--chart-gap);   /* always: each slice borders the surface, so its 3:1 is against the surface */
   stroke-linejoin: round;
   transition: transform var(--duration-enter) var(--ease-spring), opacity var(--duration) var(--ease);
 }
-.chart--split .chart__slice { stroke-width: var(--chart-gap); }
+/* Soft: lighter tones toward the surface, each slice outlined in the accent so it still has 3:1 against the page
+   (the lines and bars keep the accent). Like .diagram--soft. */
+.chart--soft {
+  --chart-2: color-mix(in oklch, var(--accent) var(--chart-soft-2), var(--surface));
+  --chart-3: color-mix(in oklch, var(--accent) var(--chart-soft-3), var(--surface));
+  --chart-4: color-mix(in oklch, var(--accent) var(--chart-soft-4), var(--surface));
+}
+.chart--soft .chart__slice { stroke: var(--accent); stroke-width: var(--border-width); }
+.chart--soft .chart__key .dot { border-color: var(--accent); }
 .chart__slice.is-on { transform: translate(calc(var(--out-x) * var(--chart-lift)), calc(var(--out-y) * var(--chart-lift))); }
 
 .chart__legend { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2) var(--space-4); margin: 0; padding: 0; list-style: none; font-size: var(--text-sm); color: var(--text-2); }
 .chart__key { display: inline-flex; align-items: center; gap: var(--space-2); border-radius: var(--radius-sm); transition: opacity var(--duration) var(--ease); }
 .chart__key:focus-visible { outline: var(--focus-width) solid var(--accent); outline-offset: var(--focus-offset); }
 .chart__key .dot { background: var(--series); border-color: var(--series); }
-.chart__value { font-family: var(--font-mono); color: var(--text-3); }
+.chart__value { font-family: var(--font-mono); color: color-mix(in oklab, var(--text-2) var(--chart-ink), var(--text-3)); }
 
 /* The grid: hairline rules, a stronger base, labels in the mono ink. */
 .chart__rule { stroke: var(--border); stroke-width: var(--border-width); }
 .chart__base { stroke: var(--border-strong); stroke-width: var(--border-width); }
-.chart__tick { font-family: var(--font-mono); font-size: var(--text-xs); fill: var(--text-3); }
+.chart__tick { font-family: var(--font-mono); font-size: var(--text-xs); fill: color-mix(in oklab, var(--text-2) var(--chart-ink), var(--text-3)); }
 .chart__tick--x { text-anchor: middle; }
 
 /* Bars */
@@ -747,8 +766,9 @@ html[data-narrow] .doc { padding: var(--space-5) var(--space-3) var(--space-8); 
 .chart__glint { stroke: var(--chart-1); filter: drop-shadow(0 0 var(--space-1) var(--chart-1)); }
 .chart__glow { fill: var(--chart-1); opacity: 0; filter: blur(var(--space-1)); transition: opacity var(--duration-enter) var(--ease); }
 .chart__plot.is-running .chart__glow { opacity: .3; }
-.chart__fill-top { stop-color: var(--chart-3); }
-.chart__fill-end { stop-color: var(--chart-4); stop-opacity: 0; }
+/* The area's fill is only a ground under the line (the line carries the values), so it keeps the light tones. */
+.chart__fill-top { stop-color: color-mix(in oklch, var(--accent) var(--chart-soft-3), var(--surface)); }
+.chart__fill-end { stop-color: color-mix(in oklch, var(--accent) var(--chart-soft-4), var(--surface)); stop-opacity: 0; }
 .chart__guide { stroke: var(--border-strong); stroke-width: var(--border-width); opacity: 0; transition: opacity var(--duration) var(--ease); }
 .chart.is-pointing .chart__guide { opacity: 1; }
 
@@ -813,8 +833,8 @@ html[data-narrow] .doc { padding: var(--space-5) var(--space-3) var(--space-8); 
 .pair__aside { display: none; }
 :is(.doc--stack, .doc--split) .pair__aside:not(:empty) { display: grid; }
 .doc__columns { display: none; }
-html:not([data-narrow]) .doc--split .pair,
-html:not([data-narrow]) .doc--split .doc__columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: var(--space-hairline); align-items: start; }
+.doc--split:not([data-narrow] *, [data-narrow]) .pair,
+.doc--split:not([data-narrow] *, [data-narrow]) .doc__columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: var(--space-hairline); align-items: start; }
 .doc__columns { padding: 0 var(--space-2) var(--space-2); }
 
 /* ---------- Thread: a line that ties each block of a .pair to its aside while work runs ----------
@@ -879,7 +899,7 @@ html:not([data-narrow]) .doc--split .doc__columns { display: grid; grid-template
   flex-direction: column;
   gap: var(--msg-gap);
 }
-html[data-narrow] .chat { padding: var(--space-5) var(--space-3); }
+[data-narrow] .chat { padding: var(--space-5) var(--space-3); }
 .msg { min-width: 0; font-size: var(--text-lg); line-height: var(--leading-body); overflow-wrap: anywhere; }
 .msg .prose { font-size: inherit; }
 .msg .prose > :last-child { margin-bottom: 0; }
@@ -892,7 +912,7 @@ html[data-narrow] .chat { padding: var(--space-5) var(--space-3); }
   white-space: pre-wrap;
 }
 .composer { flex: none; padding: var(--space-3) var(--space-5) var(--space-5); background: var(--bg); }
-html[data-narrow] .composer { padding: var(--space-2) var(--space-3) var(--space-3); }
+[data-narrow] .composer { padding: var(--space-2) var(--space-3) var(--space-3); }
 .composer__box {
   max-width: var(--measure);
   margin: 0 auto;
@@ -1115,3 +1135,12 @@ html:not([data-narrow]) .window:not(.is-full) {
   [data-status="ok"] > .status-ring circle, [data-status="hold"] > .status-ring circle { stroke-dasharray: none; }
   .window, .side { transition: none; }
 }
+
+/* ---------- Area: a region that knows its own width ----------
+   ui.js marks .area[data-narrow] below T.breakpoint() of its own width (AREA.bend), so everything that
+   follows [data-narrow] follows the space it really has, not the screen. What can reflow, reflows
+   (form columns stack, a split pair stacks, a toolbar scrolls); what can't scrolls inside the area.
+   Nothing spills out. Window and side bar still follow the screen. */
+.area { min-width: 0; max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
+[data-narrow] .toolbar { overflow-x: auto; }
+[data-narrow] .toolbar > * { flex: none; }

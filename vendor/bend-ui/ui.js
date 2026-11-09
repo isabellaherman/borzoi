@@ -6,6 +6,7 @@
 import T from "./TOKENS.bend";
 import MENU from "./MENU.bend";
 import MOTION from "./MOTION.bend";
+import AREA from "./AREA.bend";
 import { ICONS } from "./icons.js";
 import "./ui.css";
 
@@ -65,7 +66,8 @@ const VARS = {
   "--role-section": () => px(T.role_section()), "--role-group": () => px(T.role_group()),
   "--role-item": () => px(T.role_item()), "--role-detail": () => px(T.role_detail()),
   "--outline-indent": () => px(T.outline_indent()),
-  "--art-sm": () => px(T.art_sm()), "--art-md": () => px(T.art_md()), "--art-lg": () => px(T.art_lg()),
+  "--chart-sm": () => px(T.chart_sm()), "--chart-md": () => px(T.chart_md()), "--chart-lg": () => px(T.chart_lg()),
+  "--image-sm": () => px(T.image_sm()), "--image-md": () => px(T.image_md()), "--image-lg": () => px(T.image_lg()),
   "--weight-regular": () => String(T.weight_regular()),
   "--weight-medium": () => String(T.weight_medium()),
   "--weight-semibold": () => String(T.weight_semibold()),
@@ -83,6 +85,8 @@ const VARS = {
   "--ease-in-out": () => "linear(" + Array.from({ length: 21 }, (_, i) => MOTION.ease_in_out(i / 20).toFixed(4)).join(", ") + ")",
   "--chart-tone-1": () => T.chart_tone_1() + "%", "--chart-tone-2": () => T.chart_tone_2() + "%",
   "--chart-tone-3": () => T.chart_tone_3() + "%", "--chart-tone-4": () => T.chart_tone_4() + "%",
+  "--chart-ink": () => T.chart_ink() + "%",
+  "--chart-soft-2": () => T.chart_soft_2() + "%", "--chart-soft-3": () => T.chart_soft_3() + "%", "--chart-soft-4": () => T.chart_soft_4() + "%",
   "--chart-gap": () => px(T.chart_gap()), "--chart-lift": () => px(T.chart_lift()),
   "--chart-dim": () => String(T.chart_dim() / 100),
   "--bg": () => T.color_bg(), "--surface": () => T.color_surface(),
@@ -114,6 +118,16 @@ const markNarrow = () => document.documentElement.toggleAttribute("data-narrow",
 markNarrow();
 narrow.addEventListener("change", markNarrow);
 export const isNarrow = () => narrow.matches;
+// ---------- Area: a region that knows its own width ----------
+// .area gets data-narrow when its own width is below the breakpoint (AREA.bend decides), so the
+// components inside follow the room they have. initArea(el) for areas added later.
+// The mark waits for the next frame and changes only when it flips, so the change it makes inside
+// (a stacked form is taller) never feeds back into the same round of measuring.
+const areaMark = (el, width) => { const n = !!AREA.narrow(width, T.breakpoint()); if (el.hasAttribute("data-narrow") !== n) el.toggleAttribute("data-narrow", n); };
+const areaSeen = new ResizeObserver((all) => requestAnimationFrame(() => all.forEach((e) => areaMark(e.target, e.contentRect.width))));
+export function initArea(el) { areaSeen.observe(el); }
+const initAreaAll = () => document.querySelectorAll(".area").forEach(initArea);
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initAreaAll); else initAreaAll();
 
 // ---------- Segmented: one choice per group ----------
 // Clicking a button marks it pressed and unmarks the others, then fires "change"
