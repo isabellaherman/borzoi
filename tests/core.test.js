@@ -86,9 +86,9 @@ describe('Mermaid flowchart subset',()=>{
   test('unsupported syntax produces a clear error',()=>{
     for(const s of ['sequenceDiagram\nA->>B:hello','flowchart LR\nA-->B','flowchart TD\nA{Decision} --> B','flowchart TD\nA -->','flowchart TD\nA[broken','flowchart TD\nA -.-> B'])expect(G.parse(s).error.length).toBeGreaterThan(0);
   });
-  test('return loops are valid; an arrow to the same node is not',()=>{
+  test('return loops and an arrow to the same node are valid, as in Mermaid',()=>{
     expect(G.parse('flowchart TD\nA-->B-->A').error).toBe('');expect(array(G.parse('flowchart TD\nA-->B-->C-->A').edges).length).toBe(3);
-    expect(G.parse('flowchart TD\nA-->A').error).toContain('itself');
+    expect(G.parse('flowchart TD\nA-->A').error).toBe('');expect(array(G.parse('flowchart TD\nA-->|again| A').edges)[0].label).toBe('again');
   });
   test('invalid duplicate label syntax and reserved end are rejected',()=>{
     expect(G.parse('flowchart TD\nA[first][second]').error.length).toBeGreaterThan(0);
@@ -111,7 +111,7 @@ describe('drag to connect',()=>{
     expect(G.can_connect(source,'B','C')).toBe(true);
     expect(G.can_connect(source,'B','A')).toBe(true);
     expect(G.can_connect(source,'A','B')).toBe(false);
-    expect(G.can_connect(source,'A','A')).toBe(false);
+    expect(G.can_connect(source,'A','A')).toBe(true);expect(G.can_connect(G.connect(source,'A','A'),'A','A')).toBe(false);
     expect(G.can_connect('flowchart TD\nA[broken','A','B')).toBe(false);
   });
   test('a connection that would pass the size limit is refused',()=>{

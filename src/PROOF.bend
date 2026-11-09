@@ -47,10 +47,11 @@ def L.connected_source_has_the_arrow(): {==}
 def L.new_arrow_is_allowed(): {==}
 def L.return_loop_is_allowed(): {==}
 def L.return_loop_parses(): {==}
-def L.self_arrow_source_is_refused(): {==}
+def L.self_arrow_parses(): {==}
 def L.slanted_shape_is_its_text(): {==}
 def L.repeated_arrow_is_refused(): {==}
-def L.self_arrow_is_refused(): {==}
+def L.self_arrow_is_allowed(): {==}
+def L.repeated_self_arrow_is_refused(): {==}
 def L.invalid_source_is_refused(): {==}
 def L.new_node_takes_a_free_id(): {==}
 def L.readable_id_drops_accents_and_spaces(): {==}

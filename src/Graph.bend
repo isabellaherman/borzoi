@@ -26,23 +26,12 @@ def layout_edges(es: List<&2, P.Edge>, +ns: List<&2, P.Node>) -> List<&2, D.Edge
     case P.Edge{f, t, label} <> rest:
       D.Edge{index_of(ns, f, 0n), index_of(ns, t, 0n)} <> layout_edges(rest, ns)
 
-# Return loops (B back to A) are allowed; only an arrow from a node to itself is not drawn yet.
-def no_self_arrow(es: List<&2, P.Edge>) -> Bool:
-  match es:
-    case Nil{}: True{}
-    case P.Edge{f, t, label} <> rest: Bool.not(String.eq(f, t)) && no_self_arrow(rest)
-
-def check_layout(+g: P.Graph, fine: Bool) -> P.Graph:
-  match fine:
-    case True{}: g
-    case False{}: P.Graph{Nil{}, Nil{}, "An arrow from a node to itself is not supported yet. Your source is still saved.", 0n}
-
 def check_size(g: P.Graph, fits: Bool) -> P.Graph:
   match g fits:
     case P.Graph{+ns, +es, error, line} False{}:
       P.Graph{Nil{}, Nil{}, "This version supports up to 60 nodes and 120 connections per diagram.", 0n}
     case P.Graph{+ns, +es, error, line} True{}:
-      check_layout(P.Graph{ns, es, error, line}, no_self_arrow(es))
+      P.Graph{ns, es, error, line}
 
 def validate(g: P.Graph) -> P.Graph:
   match g:
@@ -192,10 +181,10 @@ def graph_has_edge(g: P.Graph, +from: String, +to: String) -> Bool:
   match g:
     case P.Graph{ns, es, error, line}: has_edge(es, from, to)
 
-# A connection is allowed when the source is valid now, the ends differ, the arrow isn't there yet,
-# and the source stays valid with it (within the size limits). Return loops are allowed.
+# A connection is allowed when the source is valid now, the arrow isn't there yet, and the source stays
+# valid with it (within the size limits). As in Mermaid, return loops and an arrow to the same node are allowed.
 def can_connect(+source: String, +from: String, +to: String) -> Bool:
-  P.is_valid(parse(source)) && Bool.not(String.eq(from, to)) && Bool.not(graph_has_edge(parse(source), from, to)) && P.is_valid(parse(connect(source, from, to)))
+  P.is_valid(parse(source)) && Bool.not(graph_has_edge(parse(source), from, to)) && P.is_valid(parse(connect(source, from, to)))
 
 # ---------- Colors: blue, green, yellow and red, the lib's four tones (accent, success, warning, danger), written as Mermaid classes (`A:::green`) ----------
 

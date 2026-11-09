@@ -144,14 +144,18 @@ law return_loop_parses:
 law slanted_shape_is_its_text:
   {G.parse("flowchart TD\nF[/points login/]") == P.Graph{[P.Node{"F", "points login"}], [], "", 0n} : P.Graph}
 
-law self_arrow_source_is_refused:
-  {P.is_valid(G.parse("flowchart TD\nA --> A")) == False{} : Bool}
+# REGRESSION: an arrow from a node to itself is valid, as in Mermaid, and keeps its arrow.
+law self_arrow_parses:
+  {G.parse("flowchart TD\nA --> A") == P.Graph{[P.Node{"A", "A"}], [P.Edge{"A", "A", ""}], "", 0n} : P.Graph}
 
 law repeated_arrow_is_refused:
   {G.can_connect("flowchart TD\nA --> B", "A", "B") == False{} : Bool}
 
-law self_arrow_is_refused:
-  {G.can_connect("flowchart TD\nA --> B", "A", "A") == False{} : Bool}
+law self_arrow_is_allowed:
+  {G.can_connect("flowchart TD\nA --> B", "A", "A") == True{} : Bool}
+
+law repeated_self_arrow_is_refused:
+  {G.can_connect("flowchart TD\nA --> A", "A", "A") == False{} : Bool}
 
 law invalid_source_is_refused:
   {G.can_connect("flowchart LR\nA --> B\nC", "A", "C") == False{} : Bool}
