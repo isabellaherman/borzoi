@@ -64,6 +64,9 @@ describe('workspace invariants',()=>{
     const b=encode(seeded());b.workspace.projects[0].diagrams[0].id=1;expect(()=>decode(b)).toThrow('duplicate');
     const c=encode(seeded());c.workspace.nextId=1;expect(()=>decode(c)).toThrow('counter');
     const d=encode(seeded());d.workspace.documentId=999;expect(()=>decode(d)).toThrow('missing');
+    // A project left with no diagrams (its last one deleted) still loads, as Domain.bend allows it.
+    const e=encode(D.delete_diagram(seeded(),array(seeded().projects)[0].id,array(array(seeded().projects)[0].documents)[0].id));
+    expect(()=>decode(e)).not.toThrow();expect(snapshot(decode(e))).toBe(snapshot(decode(encode(decode(e)))));
   });
 });
 

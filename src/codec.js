@@ -16,19 +16,19 @@ function items(x, at) { if(!Array.isArray(x))throw new Error(`${at} must be a li
 export function decode(raw) {
   object(raw,'Backup');
   if(raw.format!==FORMAT || raw.version!==1)throw new Error('This is not a supported Borzoi backup (version 1).');
-  const w=object(raw.workspace,'Workspace'), seen=new Set();let maximum=0, selected=false;
+  const w=object(raw.workspace,'Workspace'), seen=new Set();let maximum=0, selected=false, any=false;
   function unique(value) {const n=id(value);if(seen.has(n))throw new Error('The backup contains duplicate IDs.');seen.add(n);maximum=Math.max(maximum,n);return n;}
   const projects=items(w.projects,'Projects').map(p=>{
     object(p,'Project');const pid=unique(p.id);
     const docs=items(p.diagrams,'Diagrams').map(d=>{
-      object(d,'Diagram');const did=unique(d.id);
+      object(d,'Diagram');const did=unique(d.id);any=true;
       if(pid===w.projectId && did===w.documentId)selected=true;
       return {$:'Document',id:did,name:name(d.name,'Diagram name'),source:text(d.source,'Diagram source',MAX_SOURCE),history:list(items(d.history,'History').map(v=>{object(v,'Version');return {$:'Version',source:text(v.source,'Version source',MAX_SOURCE),stamp:text(v.stamp,'Version date',120)};}))};
     });
-    if(!docs.length)throw new Error('Each project needs at least one diagram.');
     return {$:'Project',id:pid,name:name(p.name,'Project name'),documents:list(docs)};
   });
-  if(projects.length ? !selected : w.projectId!==0 || w.documentId!==0)throw new Error('The selected diagram is missing from the backup.');
+  // A project may have no diagrams (Domain.bend allows it: deleting its last one). With no diagram anywhere, nothing is open.
+  if(any ? !selected : w.projectId!==0 || w.documentId!==0)throw new Error('The selected diagram is missing from the backup.');
   if(!Number.isSafeInteger(w.nextId)||w.nextId<=maximum)throw new Error('The backup contains an invalid ID counter.');
   if(w.mode!==0 && w.mode!==1)throw new Error('Invalid editor mode.');
   return {$:'Workspace',projects:list(projects),next_id:w.nextId,project:w.projectId,document:w.documentId,mode:w.mode};
