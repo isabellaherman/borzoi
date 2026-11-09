@@ -6,7 +6,7 @@ export const list = xs => xs.reduceRight((tail, head) => ({ $: 'Con', head, tail
 export function array(xs) { const out=[]; for(let p=xs;p.$==='Con';p=p.tail)out.push(p.head); return out; }
 export function encode(w) {
   return {format:FORMAT,version:1,workspace:{nextId:w.next_id,projectId:w.project,documentId:w.document,mode:w.mode,
-    projects:array(w.projects).map(p=>({id:p.id,name:p.name,diagrams:array(p.documents).map(d=>({id:d.id,name:d.name,source:d.source,history:array(d.history).map(v=>({source:v.source,stamp:v.stamp}))}))}))}};
+    projects:array(w.projects).map(p=>({id:p.id,name:p.name,...(p.inbox?{inbox:p.inbox,seen:p.seen}:{}),diagrams:array(p.documents).map(d=>({id:d.id,name:d.name,source:d.source,history:array(d.history).map(v=>({source:v.source,stamp:v.stamp}))}))}))}};
 }
 function object(x, at) { if(!x || typeof x!=='object' || Array.isArray(x))throw new Error(`${at} must be an object.`); return x; }
 function text(x, at, limit) { if(typeof x!=='string' || x.length>limit)throw new Error(`${at} must be text, at most ${limit} characters.`);return x; }
@@ -25,7 +25,8 @@ export function decode(raw) {
       if(pid===w.projectId && did===w.documentId)selected=true;
       return {$:'Document',id:did,name:name(d.name,'Diagram name'),source:text(d.source,'Diagram source',MAX_SOURCE),history:list(items(d.history,'History').map(v=>{object(v,'Version');return {$:'Version',source:text(v.source,'Version source',MAX_SOURCE),stamp:text(v.stamp,'Version date',120)};}))};
     });
-    return {$:'Project',id:pid,name:name(p.name,'Project name'),documents:list(docs)};
+    // An agent project carries its inbox key and the last message received (Domain.bend); older backups have neither.
+    return {$:'Project',id:pid,name:name(p.name,'Project name'),documents:list(docs),inbox:p.inbox===undefined?'':text(p.inbox,'Inbox key',120),seen:p.seen===undefined?'':text(p.seen,'Last message',120)};
   });
   // A project may have no diagrams (Domain.bend allows it: deleting its last one). With no diagram anywhere, nothing is open.
   if(any ? !selected : w.projectId!==0 || w.documentId!==0)throw new Error('The selected diagram is missing from the backup.');

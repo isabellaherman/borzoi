@@ -204,3 +204,26 @@ describe('deleting projects and diagrams',()=>{
     const w=two();expect(snapshot(D.delete_project(w,999))).toBe(snapshot(w));expect(snapshot(D.delete_diagram(w,w.project,999))).toBe(snapshot(w));
   });
 });
+
+describe('agent projects',()=>{
+  const agent=()=>D.create_agent_project(seeded(),'Agent test','bz-testkey');
+  const agentId=w=>array(w.projects).find(p=>p.inbox).id;
+  test('a message becomes a new diagram in that project only, and backups keep the key',()=>{
+    const w=agent(),before=encode(w).workspace.projects.find(p=>!p.inbox);
+    const next=D.receive(w,agentId(w),'bz-testkey','m1','Test title','flowchart TD\n  A --> B');
+    const saved=encode(next).workspace.projects;
+    expect(saved.find(p=>!p.inbox)).toEqual(before);
+    const inbox=saved.find(p=>p.inbox);
+    expect(inbox).toMatchObject({inbox:'bz-testkey',seen:'m1'});
+    expect(inbox.diagrams[0]).toMatchObject({name:'Test title',source:'%% borzoi from agent\nflowchart TD\n  A --> B'});
+    expect(snapshot(decode(encode(next)))).toBe(snapshot(next));
+    expect(next.project).toBe(w.project);expect(next.document).toBe(w.document);
+  });
+  test('long titles are cut to fit the backup limits',()=>{
+    const w=agent(),next=D.receive(w,agentId(w),'bz-testkey','m1','x'.repeat(500),'flowchart TD');
+    expect(()=>decode(encode(next))).not.toThrow();
+  });
+  test('older backups without keys still load as normal projects',()=>{
+    const raw=encode(seeded());expect(array(decode(raw).projects).every(p=>p.inbox==='')).toBe(true);
+  });
+});

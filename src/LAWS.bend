@@ -248,18 +248,18 @@ law rename_keeps_the_color:
 
 # REGRESSION: deleting a diagram that isn't open keeps the open one and every other diagram.
 law delete_diagram_keeps_the_rest:
-  {D.delete_diagram(D.Workspace{[D.Project{1n, "P", [D.Document{3n, "B", "b", Nil{}}, D.Document{2n, "A", "a", Nil{}}]}], 4n, 1n, 2n, 1}, 1n, 3n) ==
-   D.Workspace{[D.Project{1n, "P", [D.Document{2n, "A", "a", Nil{}}]}], 4n, 1n, 2n, 1} : D.Workspace}
+  {D.delete_diagram(D.Workspace{[D.Project{1n, "P", [D.Document{3n, "B", "b", Nil{}}, D.Document{2n, "A", "a", Nil{}}], "", ""}], 4n, 1n, 2n, 1}, 1n, 3n) ==
+   D.Workspace{[D.Project{1n, "P", [D.Document{2n, "A", "a", Nil{}}], "", ""}], 4n, 1n, 2n, 1} : D.Workspace}
 
 # REGRESSION: deleting the open diagram opens the first diagram left.
 law delete_open_diagram_opens_another:
-  {D.delete_diagram(D.Workspace{[D.Project{1n, "P", [D.Document{3n, "B", "b", Nil{}}, D.Document{2n, "A", "a", Nil{}}]}], 4n, 1n, 3n, 1}, 1n, 3n) ==
-   D.Workspace{[D.Project{1n, "P", [D.Document{2n, "A", "a", Nil{}}]}], 4n, 1n, 2n, 1} : D.Workspace}
+  {D.delete_diagram(D.Workspace{[D.Project{1n, "P", [D.Document{3n, "B", "b", Nil{}}, D.Document{2n, "A", "a", Nil{}}], "", ""}], 4n, 1n, 3n, 1}, 1n, 3n) ==
+   D.Workspace{[D.Project{1n, "P", [D.Document{2n, "A", "a", Nil{}}], "", ""}], 4n, 1n, 2n, 1} : D.Workspace}
 
 # REGRESSION: deleting the open project opens a diagram of another project, skipping empty ones.
 law delete_open_project_opens_another:
-  {D.delete_project(D.Workspace{[D.Project{5n, "Q", Nil{}}, D.Project{3n, "R", [D.Document{4n, "C", "c", Nil{}}]}, D.Project{1n, "P", [D.Document{2n, "A", "a", Nil{}}]}], 6n, 1n, 2n, 1}, 1n) ==
-   D.Workspace{[D.Project{5n, "Q", Nil{}}, D.Project{3n, "R", [D.Document{4n, "C", "c", Nil{}}]}], 6n, 3n, 4n, 1} : D.Workspace}
+  {D.delete_project(D.Workspace{[D.Project{5n, "Q", Nil{}, "", ""}, D.Project{3n, "R", [D.Document{4n, "C", "c", Nil{}}], "", ""}, D.Project{1n, "P", [D.Document{2n, "A", "a", Nil{}}], "", ""}], 6n, 1n, 2n, 1}, 1n) ==
+   D.Workspace{[D.Project{5n, "Q", Nil{}, "", ""}, D.Project{3n, "R", [D.Document{4n, "C", "c", Nil{}}], "", ""}], 6n, 3n, 4n, 1} : D.Workspace}
 
 # REGRESSION: deleting the last project leaves nothing open; ids are never reused.
 law delete_last_project_opens_nothing:
@@ -267,5 +267,53 @@ law delete_last_project_opens_nothing:
 
 # REGRESSION: renaming a diagram that isn't open renames only it and keeps what is open.
 law rename_diagram_renames_only_it:
-  {D.rename_diagram(D.Workspace{[D.Project{1n, "P", [D.Document{3n, "B", "b", Nil{}}, D.Document{2n, "A", "a", Nil{}}]}], 4n, 1n, 2n, 1}, 1n, 3n, "C") ==
-   D.Workspace{[D.Project{1n, "P", [D.Document{3n, "C", "b", Nil{}}, D.Document{2n, "A", "a", Nil{}}]}], 4n, 1n, 2n, 1} : D.Workspace}
+  {D.rename_diagram(D.Workspace{[D.Project{1n, "P", [D.Document{3n, "B", "b", Nil{}}, D.Document{2n, "A", "a", Nil{}}], "", ""}], 4n, 1n, 2n, 1}, 1n, 3n, "C") ==
+   D.Workspace{[D.Project{1n, "P", [D.Document{3n, "C", "b", Nil{}}, D.Document{2n, "A", "a", Nil{}}], "", ""}], 4n, 1n, 2n, 1} : D.Workspace}
+
+# ---------- Agent projects: a message only adds a diagram ----------
+# UNIVERSAL: a message for another project leaves that project exactly as it was.
+law message_skips_other_projects:
+  for +p: D.Project
+  for doc: D.Document
+  for id: String
+  {D.deliver(p, doc, id, False{}) == p : D.Project}
+
+# UNIVERSAL: a delivered message adds its diagram and keeps every diagram already there, unchanged.
+law message_keeps_every_diagram:
+  for +p: D.Project
+  for +doc: D.Document
+  for id: String
+  {D.documents(D.deliver(p, doc, id, True{})) == doc <> D.documents(p) : List<&2, D.Document>}
+
+# REGRESSION: a message becomes one new diagram, marked as sent by an agent; what is open stays open.
+law message_adds_one_diagram:
+  {D.receive(D.Workspace{[D.Project{1n, "P", [D.Document{2n, "A", "a", Nil{}}], "k", ""}], 3n, 1n, 2n, 1}, 1n, "k", "m1", "Churn", "flowchart TD") ==
+   D.Workspace{[D.Project{1n, "P", [D.Document{3n, "Churn", "%% borzoi from agent\nflowchart TD", Nil{}}, D.Document{2n, "A", "a", Nil{}}], "k", "m1"}], 4n, 1n, 2n, 1} : D.Workspace}
+
+# REGRESSION: a wrong key changes nothing.
+law wrong_key_changes_nothing:
+  {D.receive(D.Workspace{[D.Project{1n, "P", Nil{}, "k", ""}], 2n, 0n, 0n, 1}, 1n, "x", "m1", "T", "flowchart TD") ==
+   D.Workspace{[D.Project{1n, "P", Nil{}, "k", ""}], 2n, 0n, 0n, 1} : D.Workspace}
+
+# REGRESSION: a normal project (no key) never receives.
+law normal_project_never_receives:
+  {D.receive(D.Workspace{[D.Project{1n, "P", Nil{}, "", ""}], 2n, 0n, 0n, 1}, 1n, "", "m1", "T", "flowchart TD") ==
+   D.Workspace{[D.Project{1n, "P", Nil{}, "", ""}], 2n, 0n, 0n, 1} : D.Workspace}
+
+# REGRESSION: the same message is added once.
+law same_message_is_added_once:
+  {D.receive(D.receive(D.Workspace{[D.Project{1n, "P", Nil{}, "k", ""}], 2n, 0n, 0n, 1}, 1n, "k", "m1", "T", "flowchart TD"), 1n, "k", "m1", "T", "flowchart TD") ==
+   D.receive(D.Workspace{[D.Project{1n, "P", Nil{}, "k", ""}], 2n, 0n, 0n, 1}, 1n, "k", "m1", "T", "flowchart TD") : D.Workspace}
+
+# REGRESSION: the sender's own name is kept and read back.
+law sender_is_read:
+  {D.sender("%% borzoi from Grok\nflowchart TD\n  A --> B") == "Grok" : String}
+
+# REGRESSION: a new key replaces the old one; a normal project gets none.
+law new_key_replaces_the_old:
+  {D.new_key(D.Workspace{[D.Project{1n, "P", Nil{}, "k", "m1"}, D.Project{2n, "Q", Nil{}, "", ""}], 3n, 0n, 0n, 1}, 1n, "n") ==
+   D.Workspace{[D.Project{1n, "P", Nil{}, "n", ""}, D.Project{2n, "Q", Nil{}, "", ""}], 3n, 0n, 0n, 1} : D.Workspace}
+
+law normal_project_gets_no_key:
+  {D.new_key(D.Workspace{[D.Project{2n, "Q", Nil{}, "", ""}], 3n, 0n, 0n, 1}, 2n, "n") ==
+   D.Workspace{[D.Project{2n, "Q", Nil{}, "", ""}], 3n, 0n, 0n, 1} : D.Workspace}

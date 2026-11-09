@@ -55,9 +55,9 @@ function renderNavigation(){
   for(const p of array(workspace.projects)){
     const group=element('div','side__section'),head=element('button','btn btn--ghost side__toggle'),items=element('div','side__items');
     head.type='button';head.title=p.name;head.setAttribute('aria-expanded','true');
-    head.append(icon('file-text'),element('span','side__text',p.name),icon('chevron-down','icon icon--sm side__chevron'));
+    head.append(icon(p.inbox?'wand-sparkles':'file-text'),element('span','side__text',p.name),icon('chevron-down','icon icon--sm side__chevron'));
     for(const d of array(p.documents)){
-      const b=navButton(d.name,()=>switchTo(p.id,d.id));
+      const from=D.sender(d.source),b=navButton(d.name,()=>switchTo(p.id,d.id),from?'wand-sparkles':undefined);if(from)b.title=`${d.name} · from ${from}`;
       if(d.id===workspace.document&&p.id===workspace.project)b.setAttribute('aria-current','page');
       items.append(sideRow(b,d.name,[
         menuItem('Rename','pencil',()=>nameDialog('Rename diagram',d.name,value=>change(D.rename_diagram(workspace,p.id,d.id,value),{navigation:true}))),
@@ -66,6 +66,7 @@ function renderNavigation(){
     }
     items.append(navButton('New diagram',()=>nameDialog('New diagram','Untitled diagram',value=>{checkpoint();change(D.create_diagram(workspace,p.id,value),{navigation:true});}),'plus'));
     group.append(sideRow(head,p.name,[
+      ...(p.inbox?[menuItem('Agent instructions','copy',()=>agentInstructions(p.id)),menuItem('New key','refresh-cw',()=>replaceKey(p)),element('hr','separator')]:[]),
       menuItem('Rename','pencil',()=>nameDialog('Rename project',p.name,value=>change(D.rename_project(workspace,p.id,value),{navigation:true}))),
       element('hr','separator'),menuItem('Delete','trash-2',()=>deleteProject(p)),
     ]),items);root.append(group);
@@ -198,7 +199,71 @@ function deleteProject(p){const n=array(p.documents).length;confirmDelete('Delet
 function deleteDiagram(p,d){confirmDelete('Delete diagram?',`Delete “${d.name}” and its history?`,()=>{change(D.delete_diagram(workspace,p.id,d.id),{navigation:true});notice('Diagram deleted.');});}
 function download(data,filename,type){const url=URL.createObjectURL(new Blob([data],{type})),a=document.createElement('a');a.href=url;a.download=filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 function backup(){download(JSON.stringify(recoveryPayload??{...encode(workspace),exportedAt:stamp()},null,2),`borzoi-${recoveryPayload?'recovery':'backup'}-${new Date().toISOString().slice(0,10)}.json`,'application/json');}
-$('#new-project').onclick=()=>nameDialog('New project','',name=>{checkpoint();change(D.create_project(workspace,name),{navigation:true});});
+$('#new-project').querySelector('.menu').append(
+  menuItem('Project','file-text',()=>nameDialog('New project','',name=>{checkpoint();change(D.create_project(workspace,name),{navigation:true});})),
+  menuItem('Agent project','wand-sparkles',()=>nameDialog('New agent project','',name=>{const id=workspace.next_id;checkpoint();change(D.create_agent_project(workspace,name,newKey()),{navigation:true});agentInstructions(id);})),
+);
+// Agent projects: agents send plain Mermaid to the project's inbox on ntfy.sh, a free public message relay. The key is
+// the inbox's name, made at random here. Borzoi fetches what arrived; Domain.bend turns each message into a new
+// diagram in that project only (it never changes a diagram that exists). ntfy.sh keeps messages for about 12 hours.
+const INBOX='https://ntfy.sh/';
+function newKey(){const abc='abcdefghijkmnpqrstuvwxyz23456789';return 'bz-'+Array.from(crypto.getRandomValues(new Uint8Array(20)),b=>abc[b%32]).join('');}
+const projectById=id=>array(workspace.projects).find(p=>p.id===id);
+function instructionsFor(p){return `You can send diagrams to my Borzoi project "${p.name}".
+
+How to send one:
+- Make an HTTP POST request to ${INBOX}${p.inbox}
+- Body: the diagram as plain Mermaid text, with real line breaks.
+- Header "Title": the diagram's name.
+
+Write the diagram like this:
+%% borzoi from <your name>
+flowchart TD
+  A[First step] --> B[Next step]
+  B -->|label on the arrow| C[Another step]:::red
+
+Rules:
+- Use only flowchart TD, nodes like A[Text], arrows --> and arrow labels -->|text|.
+- Color a node with :::red, :::yellow, :::green or :::blue.
+- No subgraphs, no other directions (such as LR), no rounded or diamond shapes.
+- Keep each diagram under 4,000 characters.
+- Send each diagram once, and send nothing else to this address.
+
+Anyone with this address can add diagrams to this project, so keep it private.`;}
+function agentInstructions(id){
+  const p=projectById(id);if(!p?.inbox)return;
+  const body=openModal('Agent instructions'),text=instructionsFor(p),pre=element('pre','revision-list__source',text),actions=element('div','actions');
+  const copy=button('Copy instructions',async()=>{try{await navigator.clipboard.writeText(text);ui.modal.close();notice('Instructions copied. Paste them to your agent.');}catch{const r=document.createRange();r.selectNodeContents(pre);getSelection().removeAllRanges();getSelection().addRange(r);notice('Copy the selected text with Cmd+C or Ctrl+C.');}},'btn btn--primary');
+  actions.append(button('Close',()=>ui.modal.close()),copy);
+  body.append(element('p','text','Give these instructions to your agent once. Each diagram it sends becomes a new diagram in this project. Agents can only add diagrams; they never change yours.'),pre,element('p','detail','Diagrams arrive while Borzoi is open, or the next time you open it within about 12 hours.'),actions);
+}
+function replaceKey(p){
+  const body=openModal('Make a new key?'),actions=element('div','actions');
+  actions.append(button('Cancel',()=>ui.modal.close()),button('Make new key',()=>{ui.modal.close();change(D.new_key(workspace,p.id,newKey()),{navigation:true});agentInstructions(p.id);},'btn btn--primary'));
+  body.append(element('p','text',`The current key for “${p.name}” stops working. Agents that have the old instructions can't send diagrams any more until you give them the new ones.`),actions);
+}
+let checking=false;
+async function messagesFor(p){
+  const r=await fetch(`${INBOX}${encodeURIComponent(p.inbox)}/json?poll=1&since=${encodeURIComponent(p.seen||'all')}`);
+  if(!r.ok)throw new Error(`The inbox answered ${r.status}.`);
+  const out=[];for(const line of (await r.text()).split('\n')){if(!line.trim())continue;try{const m=JSON.parse(line);if(m.event==='message')out.push(m);}catch{}}
+  // A message over 4 KB arrives as a file; read it when the relay allows it.
+  for(const m of out)if(m.attachment?.url){try{const a=await fetch(m.attachment.url);if(a.ok)m.message=await a.text();}catch{}}
+  return out;
+}
+async function checkInboxes(){
+  if(locked||checking||document.hidden)return;checking=true;
+  try{
+    let arrived=0;
+    for(const p of array(workspace.projects).filter(p=>p.inbox)){
+      let messages;try{messages=await messagesFor(p);}catch{continue;}
+      let next=workspace;
+      for(const m of messages)next=D.receive(next,p.id,p.inbox,String(m.id??''),String(m.title??''),String(m.message??''));
+      if(next.next_id!==workspace.next_id&&!locked){arrived+=next.next_id-workspace.next_id;change(next);}
+    }
+    if(arrived){renderNavigation();notice(arrived===1?'A new diagram arrived from an agent.':`${arrived} new diagrams arrived from agents.`);}
+  }finally{checking=false;}
+}
 // View mode / Edit mode: the lib's Dropdown; the trigger shows the current mode (Edit is the default, Domain.initial).
 const MODES=[['view','View mode','eye'],['edit','Edit mode','pencil']];
 function renderMode(){
@@ -251,5 +316,6 @@ async function start(){
   }else setStatus('Ready');}
   catch(error){locked=true;saveError=true;setStatus('Storage unavailable',true);notice(`Could not open local data: ${error.message} Your stored data has not been replaced.`,true,true);}
   $('#app').inert=false;sidebar.closeOnNarrow();render();
+  checkInboxes();setInterval(checkInboxes,60000);document.addEventListener('visibilitychange',checkInboxes);
 }
 start();

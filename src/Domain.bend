@@ -6,7 +6,7 @@ type Version is Data:
 type Document is Data:
   Document{id: Nat, name: String, source: String, history: List<&2, Version>}
 type Project is Data:
-  Project{id: Nat, name: String, documents: List<&2, Document>}
+  Project{id: Nat, name: String, documents: List<&2, Document>, inbox: String, seen: String}
 type Workspace is Data:
   Workspace{projects: List<&2, Project>, next_id: Nat, project: Nat, document: Nat, mode: U32}
 type Action is Data:
@@ -77,14 +77,14 @@ def edit_documents(ds: List<&2, Document>, +id: Nat, +a: Action) -> List<&2, Doc
 
 def edit_project(p: Project, id: Nat, a: Action, selected: Bool) -> Project:
   match p selected:
-    case Project{i, n, ds} False{}: Project{i, n, ds}
-    case Project{i, n, ds} True{}: Project{i, n, edit_documents(ds, id, a)}
+    case Project{i, n, ds, k, sn} False{}: Project{i, n, ds, k, sn}
+    case Project{i, n, ds, k, sn} True{}: Project{i, n, edit_documents(ds, id, a), k, sn}
 
 def edit_projects(ps: List<&2, Project>, +project: Nat, +document: Nat, +a: Action) -> List<&2, Project>:
   match ps:
     case Nil{}: Nil{}
-    case Project{+i, n, ds} <> t:
-      edit_project(Project{i, n, ds}, document, a, Nat.is_eq(i, project)) <> edit_projects(t, project, document, a)
+    case Project{+i, n, ds, k, sn} <> t:
+      edit_project(Project{i, n, ds, k, sn}, document, a, Nat.is_eq(i, project)) <> edit_projects(t, project, document, a)
 
 def update(w: Workspace, a: Action) -> Workspace:
   match w:
@@ -99,7 +99,7 @@ def find_document(ds: List<&2, Document>, +id: Nat) -> Maybe<&2, Document>:
 def find_project(ps: List<&2, Project>, +project: Nat, +document: Nat) -> Maybe<&2, Document>:
   match ps:
     case Nil{}: None{}
-    case Project{i, n, ds} <> t:
+    case Project{i, n, ds, k, sn} <> t:
       Bool.pick(Maybe<&2, Document>, Nat.is_eq(i, project), find_document(ds, document), find_project(t, project, document))
 
 def current(w: Workspace) -> Maybe<&2, Document>:
@@ -126,18 +126,18 @@ def new_document(id: Nat, name: String) -> Document:
 def create_project(w: Workspace, name: String) -> Workspace:
   match w:
     case Workspace{ps, +next, p, d, mode}:
-      Workspace{Project{next, name, [new_document(1n+next, "Untitled diagram")]} <> ps, 2n+next, next, 1n+next, 1}
+      Workspace{Project{next, name, [new_document(1n+next, "Untitled diagram")], "", ""} <> ps, 2n+next, next, 1n+next, 1}
 
 def add_document(ps: List<&2, Project>, +id: Nat, +doc: Document) -> List<&2, Project>:
   match ps:
     case Nil{}: Nil{}
-    case Project{+i, n, +ds} <> t:
-      Project{i, n, Bool.pick(List<&2, Document>, Nat.is_eq(i, id), doc <> ds, ds)} <> add_document(t, id, doc)
+    case Project{+i, n, +ds, k, sn} <> t:
+      Project{i, n, Bool.pick(List<&2, Document>, Nat.is_eq(i, id), doc <> ds, ds), k, sn} <> add_document(t, id, doc)
 
 def has_project(ps: List<&2, Project>, +id: Nat) -> Bool:
   match ps:
     case Nil{}: False{}
-    case Project{i, n, ds} <> t: Nat.is_eq(i, id) || has_project(t, id)
+    case Project{i, n, ds, k, sn} <> t: Nat.is_eq(i, id) || has_project(t, id)
 
 def create_diagram_checked(w: Workspace, +project: Nat, name: String, valid: Bool) -> Workspace:
   match w valid:
@@ -153,8 +153,8 @@ def create_diagram(w: Workspace, +project: Nat, name: String) -> Workspace:
 def rename_projects(ps: List<&2, Project>, +id: Nat, +name: String) -> List<&2, Project>:
   match ps:
     case Nil{}: Nil{}
-    case Project{+i, n, ds} <> t:
-      Project{i, Bool.pick(String, Nat.is_eq(i, id), name, n), ds} <> rename_projects(t, id, name)
+    case Project{+i, n, ds, k, sn} <> t:
+      Project{i, Bool.pick(String, Nat.is_eq(i, id), name, n), ds, k, sn} <> rename_projects(t, id, name)
 
 def rename_project(w: Workspace, id: Nat, name: String) -> Workspace:
   match w:
@@ -168,7 +168,7 @@ def document_count(ds: List<&2, Document>) -> Nat:
 def project_span(ps: List<&2, Project>) -> Nat:
   match ps:
     case Nil{}: 0n
-    case Project{i, n, ds} <> t: (1n + document_count(ds) + project_span(t) : Nat)
+    case Project{i, n, ds, k, sn} <> t: (1n + document_count(ds) + project_span(t) : Nat)
 
 def reindex_documents(ds: List<&2, Document>, +next: Nat) -> List<&2, Document>:
   match ds:
@@ -179,8 +179,8 @@ def reindex_documents(ds: List<&2, Document>, +next: Nat) -> List<&2, Document>:
 def reindex_projects(ps: List<&2, Project>, +next: Nat) -> List<&2, Project>:
   match ps:
     case Nil{}: Nil{}
-    case Project{i, n, +ds} <> t:
-      Project{next, n, reindex_documents(ds, 1n+next)} <> reindex_projects(t, (next + 1n + document_count(ds) : Nat))
+    case Project{i, n, +ds, k, sn} <> t:
+      Project{next, n, reindex_documents(ds, 1n+next), k, sn} <> reindex_projects(t, (next + 1n + document_count(ds) : Nat))
 
 def append_projects(a: List<&2, Project>, b: List<&2, Project>) -> List<&2, Project>:
   match a:
@@ -189,8 +189,8 @@ def append_projects(a: List<&2, Project>, b: List<&2, Project>) -> List<&2, Proj
 
 def select_first(w: Workspace) -> Workspace:
   match w:
-    case Workspace{Project{+pid, name, Document{+did, title, text, h} <> ds} <> ps, next, p, d, mode}:
-      Workspace{Project{pid, name, Document{did, title, text, h} <> ds} <> ps, next, pid, did, mode}
+    case Workspace{Project{+pid, name, Document{+did, title, text, h} <> ds, k, sn} <> ps, next, p, d, mode}:
+      Workspace{Project{pid, name, Document{did, title, text, h} <> ds, k, sn} <> ps, next, pid, did, mode}
     case other: other
 
 def import_projects(w: Workspace, +incoming: List<&2, Project>) -> Workspace:
@@ -221,7 +221,7 @@ def write_source(+w: Workspace, text: String) -> Workspace:
 # Only the exact, unmodified original demo workspace is removable.
 def is_legacy_demo(w: Workspace) -> Bool:
   match w:
-    case Workspace{[Project{1n, pn, [Document{2n, dn, text, [Version{old, time}]}]}], 3n, 1n, 2n, mode}:
+    case Workspace{[Project{1n, pn, [Document{2n, dn, text, [Version{old, time}]}], k, sn}], 3n, 1n, 2n, mode}:
       String.eq(pn, "Research notebook") && String.eq(dn, "A research flow") &&
       String.eq(text, legacy_demo_source()) && String.eq(old, legacy_demo_source()) && String.eq(time, "Created")
     case other: False{}
@@ -253,20 +253,20 @@ def drop_documents(ds: List<&2, Document>, +id: Nat) -> List<&2, Document>:
 def drop_project(ps: List<&2, Project>, +id: Nat) -> List<&2, Project>:
   match ps:
     case Nil{}: Nil{}
-    case Project{+i, n, ds} <> t:
-      keep_project(Project{i, n, ds}, Nat.is_eq(i, id), drop_project(t, id))
+    case Project{+i, n, ds, k, sn} <> t:
+      keep_project(Project{i, n, ds, k, sn}, Nat.is_eq(i, id), drop_project(t, id))
 
 def drop_diagram(ps: List<&2, Project>, +project: Nat, +document: Nat) -> List<&2, Project>:
   match ps:
     case Nil{}: Nil{}
-    case Project{+i, n, +ds} <> t:
-      Project{i, n, Bool.pick(List<&2, Document>, Nat.is_eq(i, project), drop_documents(ds, document), ds)} <> drop_diagram(t, project, document)
+    case Project{+i, n, +ds, k, sn} <> t:
+      Project{i, n, Bool.pick(List<&2, Document>, Nat.is_eq(i, project), drop_documents(ds, document), ds), k, sn} <> drop_diagram(t, project, document)
 
 def first_location(ps: List<&2, Project>) -> Maybe<&2, Location>:
   match ps:
     case Nil{}: None{}
-    case Project{i, n, Document{did, dn, s, h} <> ds} <> t: Some{Location{i, did}}
-    case Project{i, n, Nil{}} <> t: first_location(t)
+    case Project{i, n, Document{did, dn, s, h} <> ds, k, sn} <> t: Some{Location{i, did}}
+    case Project{i, n, Nil{}, k, sn} <> t: first_location(t)
 
 def reselect(w: Workspace, there: Maybe<&2, Location>) -> Workspace:
   match w there:
@@ -295,3 +295,85 @@ def delete_diagram(w: Workspace, +project: Nat, +document: Nat) -> Workspace:
 def rename_diagram(w: Workspace, +project: Nat, +document: Nat, name: String) -> Workspace:
   match w:
     case Workspace{ps, next, p, d, mode}: Workspace{edit_projects(ps, project, document, Rename{name}), next, p, d, mode}
+
+# ---------- Agent projects ----------
+# An agent project has an inbox key (a normal project has none: ""). Agents send that inbox plain text, and each
+# message becomes a new diagram in that project only: a message never changes a diagram that exists, nor another
+# project. `seen` is the last message received, so the same message is never added twice.
+def create_agent_project(w: Workspace, name: String, key: String) -> Workspace:
+  match w:
+    case Workspace{ps, +next, p, d, mode}:
+      Workspace{Project{next, name, Nil{}, key, ""} <> ps, 1n+next, p, d, mode}
+
+# A received diagram says who sent it in a Mermaid comment, `%% borzoi from <name>`; other tools ignore it.
+def from_prefix() -> String:
+  "%% borzoi from "
+
+def is_from_line(+line: String) -> Bool:
+  String.starts_with(String.trim(line), from_prefix())
+
+def sender.go(ls: List<&2, String>) -> String:
+  match ls:
+    case Nil{}: ""
+    case +l <> t:
+      Bool.pick(String, is_from_line(l), String.trim(String.drop(String.trim(l), String.length(from_prefix()))), sender.go(t))
+
+# Who sent this diagram; "" when nobody did (you made it).
+def sender(source: String) -> String:
+  sender.go(String.lines(source))
+
+# Text with no sender line gets one, so it always shows it came from an agent.
+def marked(+text: String) -> String:
+  Bool.pick(String, String.is_empty(sender(text)), String.append(String.append(from_prefix(), "agent\n"), text), text)
+
+# Names and sources are capped well under the backup's limits (120 and 20,000 characters).
+def received_name(+title: String) -> String:
+  Bool.pick(String, String.is_empty(String.trim(title)), "Agent diagram", String.take(String.trim(title), 60n))
+
+def received(id: Nat, title: String, text: String) -> Document:
+  Document{id, received_name(title), String.take(marked(text), 9000n), Nil{}}
+
+# Only the chosen project, only when the key matches and the message is new.
+def can_receive(ps: List<&2, Project>, +project: Nat, +key: String, +id: String) -> Bool:
+  match ps:
+    case Nil{}: False{}
+    case Project{i, n, ds, k, sn} <> t:
+      (Nat.is_eq(i, project) && String.eq(k, key) && Bool.not(String.eq(sn, id)) && Bool.not(String.is_empty(key))) || can_receive(t, project, key, id)
+
+def deliver(p: Project, doc: Document, id: String, selected: Bool) -> Project:
+  match p selected:
+    case Project{i, n, ds, k, sn} False{}: Project{i, n, ds, k, sn}
+    case Project{i, n, ds, k, sn} True{}: Project{i, n, doc <> ds, k, id}
+
+def deliver_projects(ps: List<&2, Project>, +project: Nat, +id: String, +doc: Document) -> List<&2, Project>:
+  match ps:
+    case Nil{}: Nil{}
+    case Project{+i, n, ds, k, sn} <> t:
+      deliver(Project{i, n, ds, k, sn}, doc, id, Nat.is_eq(i, project)) <> deliver_projects(t, project, id, doc)
+
+def receive_checked(w: Workspace, +project: Nat, +id: String, +title: String, +text: String, ok: Bool) -> Workspace:
+  match w ok:
+    case Workspace{ps, next, p, d, mode} False{}: Workspace{ps, next, p, d, mode}
+    case Workspace{ps, +next, p, d, mode} True{}:
+      Workspace{deliver_projects(ps, project, id, received(next, title, text)), 1n+next, p, d, mode}
+
+# One message from an agent: a new diagram in its project. What is open stays open.
+def receive(w: Workspace, +project: Nat, +key: String, +id: String, +title: String, +text: String) -> Workspace:
+  match w:
+    case Workspace{+ps, next, p, d, mode}:
+      receive_checked(Workspace{ps, next, p, d, mode}, project, id, title, text, can_receive(ps, project, key, id))
+
+# A new key: the old one stops working. Only an agent project has one to change.
+def rekey_projects(ps: List<&2, Project>, +project: Nat, +key: String) -> List<&2, Project>:
+  match ps:
+    case Nil{}: Nil{}
+    case Project{+i, +n, +ds, +k, +sn} <> t:
+      Bool.pick(Project, Nat.is_eq(i, project) && Bool.not(String.is_empty(k)) && Bool.not(String.is_empty(key)), Project{i, n, ds, key, ""}, Project{i, n, ds, k, sn}) <> rekey_projects(t, project, key)
+
+def new_key(w: Workspace, +project: Nat, key: String) -> Workspace:
+  match w:
+    case Workspace{ps, next, p, d, mode}: Workspace{rekey_projects(ps, project, key), next, p, d, mode}
+
+def documents(p: Project) -> List<&2, Document>:
+  match p:
+    case Project{i, n, ds, k, sn}: ds

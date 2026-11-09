@@ -22,7 +22,7 @@ def L.unselected_is_unchanged(d, a): {==}
 
 def L.other_project_is_unchanged(p, id, a):
   match p:
-    case D.Project{i, n, ds}: {==}
+    case D.Project{i, n, ds, k, sn}: {==}
 
 def L.missing_restore_is_unchanged(d, stamp): {==}
 def L.empty_history_has_no_version(i): {==}
@@ -80,3 +80,18 @@ def L.delete_open_diagram_opens_another(): {==}
 def L.delete_open_project_opens_another(): {==}
 def L.delete_last_project_opens_nothing(): {==}
 def L.rename_diagram_renames_only_it(): {==}
+def L.message_skips_other_projects(p, doc, id):
+  match p:
+    case D.Project{i, n, ds, k, sn}: {==}
+
+def L.message_keeps_every_diagram(p, doc, id):
+  match p:
+    case D.Project{i, n, ds, k, sn}: {==}
+
+def L.message_adds_one_diagram(): {==}
+def L.wrong_key_changes_nothing(): {==}
+def L.normal_project_never_receives(): {==}
+def L.same_message_is_added_once(): {==}
+def L.sender_is_read(): {==}
+def L.new_key_replaces_the_old(): {==}
+def L.normal_project_gets_no_key(): {==}
