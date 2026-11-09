@@ -1,5 +1,80 @@
 # Changelog
 
+## 1.0.29 (2026-11-09)
+
+- Docs: the **Prose** page in the standard format. A Prose filter (On, Off) over the same HTML on a panel without a header: On shows the lib's type, Off what the browser draws. Nothing in the lib changes.
+
+## 1.0.28 (2026-11-09)
+
+- Docs: **Responsive** and **Prose** move to Foundations (`/foundations/responsive` after Size, `/foundations/prose` after Type). **Panel** is in the standard format: a Header filter (With, Without) over one panel with an empty art in its body. Nothing in the lib changes.
+
+## 1.0.27 (2026-11-09)
+
+- **Art**: `.art--empty`, an art with no image yet (the image symbol on a quiet ground, 4:3, at the sm/md/lg heights), and `.art--fill` to take the width it is given. The Art docs page shows it instead of the blue picture.
+- **Doc**: `.doc--full`, the whole page less the gutters (the doc's padding). `.doc` and `.doc--wide` are unchanged.
+- Docs: "Page and doc" is now **Pages**, in the standard format: Width (Reading, Full) and Content (Art, Docs), the lib's pieces as they are. **Pair** shows Hidden, Stack and Split with panels. No blocks or dots on either page; the README's example has none either.
+
+## 1.0.26 (2026-11-09)
+
+- **Docs: every snippet is a code block**. Each page's Code section and the Overview's Install, Import and Use show their code in a code block: the language in the head (from the README's fence), Copy, the code colored in that language. Laws keep their own look. Nothing in the lib changes.
+
+## 1.0.25 (2026-11-09)
+
+- **Docs: the Agent page in the standard format**. The large and the small agent side by side, centered, with no box; on top, Action (Look, Spin, Shake, Ask, Busy → Done) and Open (Click, Hover), both segmented. Each action plays on both agents; in Look they look at each other. Accessibility collapsed (4 of 4 pass, full review pending), Code, Laws. The separate Claude and OpenAI marks row is gone; the marks show inside the options. Nothing in the lib changes.
+
+## 1.0.24 (2026-11-08)
+
+- **Docs: Components in alphabetical order** in the side bar. Nothing in the lib changes.
+
+## 1.0.23 (2026-11-08)
+
+- **Docs: no Block page**. A block is the line the Thread runs through, not a component on its own; `.block` stays in the lib for the Thread and the Pair. Nothing in the lib changes.
+
+## 1.0.22 (2026-11-08)
+
+- **Code block**: `codeBlock(code, { lang, name, head, numbers, wrap })` and `upgrade(pre)` in `bend-ui/syntax`. A head with the file or the language and Copy (the Button's `data-copy`), the code line by line; `.code-block--numbers` (screen readers skip the numbers), `--wrap`, `--bare`. The code box takes the focus, so a keyboard can scroll long lines.
+- **Seven more languages** in SYNTAX.bend: Python, Rust, Go, SQL (with `--` comments), YAML (read like TOML), Markdown and Diff (read a line at a time, `line_kind`). Two new kinds, added and removed, with tokens `syntax_added` (success-text, 5.38:1) and `syntax_removed` (danger, 5.46:1).
+- `toLines()` is new in syntax.js; `highlight()` and `toHtml()` work as before.
+- Docs: the Syntax page is now **Code block** (`/components/code-block`), in the standard format (Language, Header, Lines and Long lines filters; Accessibility, collapsed, 6 of 6 pass; Code).
+
+## 1.0.21 (2026-11-08)
+
+- **Form layouts and sections**: `.form__section` + `.form__legend` (a fieldset), `.form__row` with `.form--columns` (fields side by side), `.form--inline` (labels in their own column, `form_label_width`, new token, 128). Both stack on narrow screens. `.form` now uses the `form_gap` token (same value).
+- **Form check on send** (`data-validate novalidate`): every field is checked (required, type, minlength, pattern; `data-error` is its message). Wrong fields get `aria-invalid` and their message; a `.form__summary` lists them all, linked, and takes the focus; fixing a field clears its error. If all is right, the submit `.btn--async` shows busy and the form fires `send` with `{ data, done(label), fail(message) }`. `setFieldError(control, message)` is exported. A plain `.form` stays as it is.
+- Docs: the Form page in the standard format (Layout and State filters over one real form, State from Empty to Errors; Accessibility, collapsed, 7 of 7 pass; Code).
+
+## 1.0.20 (2026-11-08)
+
+- **Docs: the side bar shows where you are**: opening a page (from the side bar, a link, or back and forward) opens its section, closes the others, marks the page and scrolls it into view. Nothing in the lib changes.
+
+## 1.0.19 (2026-11-08)
+
+- **Input at WCAG AA (changes existing fields)**: the border is now text-3 (3.35:1, was 1.59:1) and the placeholder text-2 (6.58:1, was the browser's light gray). A disabled field now uses `disabled_opacity`.
+- **Input sizes and shape**: `.input--sm` (24), `--lg` (36), `--xl` (48), the button heights, so a field and a button line up; the shape follows `theme({ radius })` and `data-radius` like buttons and segmented (a textarea stops at `radius_lg`).
+- **States**: error (`aria-invalid="true"`, danger border and halo), `.is-valid` (success), disabled, read-only (surface-2, dashed).
+- **Field**: `.field__required`, `.field__foot` with `.field__help`, `.field__msg--error` / `--success` (an icon and words), `.field__count`. `.input-icon` puts an icon inside a field; `.input-group` puts a button inside it, and the pair has one border, one focus ring and one state (in sm, where a 24px button doesn't fit inside, the button is joined on the side).
+- The textarea's minimum height is the token `textarea_min_height` (96), no longer a loose `* 3`.
+- Docs: the Input and field page in the standard format (Shape, Size and State filters over Text, With icon, With button, Mono, Textarea; Accessibility, collapsed, 9 of 9 pass; Code).
+
+## 1.0.18 (2026-11-08)
+
+- **Docs: the Dropdown menu page in the standard format**: one real dropdown, open and centered, with Items (Plain, Icons, Check, Tag) and Position (Below, End, Up) filters; a separator and a disabled item are always there. Accessibility is collapsed with its summary (8 of 16 pass). The two Variants sections and the example canvases are gone; the node menu lives on the Diagram page. Nothing in the lib changes.
+
+## 1.0.17 (2026-11-08)
+
+- **Segmented motion (opt-in)**: the choice moves. `.segmented--slide` puts a thumb behind the chosen item that travels to the next one; `data-motion="stretch"` leads with the edge you went toward, `data-motion="spring"` overshoots and settles. `.segmented--extend` is for icon items: the chosen one also shows its name and the thumb rides it as it opens. Text changes color in the thumb's time and curve. `initSegmented(group)` is exported. A plain `.segmented` looks and works as before.
+- **`--ease-in-out`**: MOTION.bend's `ease_in_out` as a CSS easing (sampled), so CSS and JS motion share the curve with no slow tail.
+- **Segmented shape**: rounded (as before), pill or sharp, from the same choice as buttons: `theme({ radius })` or `data-radius` on a container. Rounded uses `segmented_outer_radius` and `segmented_inner_radius`, the tokens the laws check (same values as before).
+- Docs: the Segmented page in the new format (a Playground with Shape and Animation filters over three rows: Text, Icons, Extend; Accessibility, collapsed, 6 of 8 pass; Code; Laws). No small segmented: its 18px items would fail WCAG 2.5.8 (24px targets).
+
+## 1.0.16 (2026-11-08)
+
+- **Follow is removed** (owner's call): `follow.js`, the `bend-ui/follow` export, `.window__follow`, and `follow_top`, `follow_bottom`, `follow_anchor` in MOTION.bend. **Breaking** for apps that import `createFollow`. The Thread section of the README no longer uses it, and the docs have no Follow page.
+
+## 1.0.15 (2026-11-08)
+
+- **Docs: the Diagram page in the Button page's format**: a Playground with every look (Border, Soft) in every tone, all nodes one width, and a Tag filter; Composition (the arrows); Animations (the editable diagram on a canvas, where nodes grow, connect, rename and leave); Accessibility (collapsed, 11 of 13 pass); Code. Each page's filters only drive its own playground. Nothing in the lib changes.
+
 ## 1.0.14 (2026-11-08)
 
 - **Docs: every page has its own address**: `/components/button`, `/foundations/color`, `/patterns/chat` (the group is the side bar's section); the Overview is the root. The address changes as you move, back and forward work, and a link opens that page. On GitHub Pages a deep link goes through `404.html`, which hands it to the docs (`?p=`); `bun run site` copies it into `site/`. Nothing in the lib changes.

@@ -39,7 +39,7 @@ const VARS = {
   "--btn-padding-x": () => px(T.btn_padding_x()), "--btn-padding-x-sm": () => px(T.btn_padding_x_sm()), "--btn-padding-x-lg": () => px(T.btn_padding_x_lg()), "--btn-padding-x-xl": () => px(T.btn_padding_x_xl()),
   "--btn-wide-padding-x": () => px(T.btn_wide_padding_x()), "--btn-wide-padding-x-sm": () => px(T.btn_wide_padding_x_sm()), "--btn-wide-padding-x-lg": () => px(T.btn_wide_padding_x_lg()), "--btn-wide-padding-x-xl": () => px(T.btn_wide_padding_x_xl()),
   "--control-lg": () => px(T.control_lg()), "--control-xl": () => px(T.control_xl()),
-  "--btn-hover-brightness": () => T.btn_hover_brightness(), "--disabled-opacity": () => String(T.disabled_opacity() / 100),
+  "--textarea-min-height": () => px(T.textarea_min_height()), "--form-gap": () => px(T.form_gap()), "--form-label-width": () => px(T.form_label_width()), "--btn-hover-brightness": () => T.btn_hover_brightness(), "--disabled-opacity": () => String(T.disabled_opacity() / 100),
   "--icon-sm": () => px(T.icon_sm()), "--icon-md": () => px(T.icon_md()),
   "--icon-lg": () => px(T.icon_lg()), "--icon-xl": () => px(T.icon_xl()), "--icon-stroke": () => T.icon_stroke(),
   "--dot-size": () => px(T.dot_size()), "--block-min-lines": () => String(T.block_min_lines()), "--ring-offset": () => px(T.ring_offset()), "--ring-width": () => px(T.ring_width()),
@@ -47,7 +47,7 @@ const VARS = {
   "--window-margin": () => px(T.window_margin()), "--window-max": () => px(T.window_max()),
   "--agent-sm": () => px(T.agent_sm()), "--agent-lg": () => px(T.agent_lg()), "--agent-xl": () => px(T.agent_xl()),
   "--msg-max": () => px(T.msg_max()), "--msg-gap": () => px(T.msg_gap()), "--composer-max": () => px(T.composer_max()),
-  "--segmented-item": () => px(T.segmented_item()),
+  "--segmented-item": () => px(T.segmented_item()), "--segmented-outer-radius": () => px(T.segmented_outer_radius()), "--segmented-inner-radius": () => px(T.segmented_inner_radius()),
   "--layer-thread": () => String(T.layer_thread()), "--layer-foot": () => String(T.layer_foot()), "--layer-dock": () => String(T.layer_dock()), "--layer-menu": () => String(T.layer_menu()),
   "--layer-side": () => String(T.layer_side()), "--layer-fly": () => String(T.layer_fly()),
   "--layer-part": () => String(T.layer_part()), "--layer-part-top": () => String(T.layer_part_top()),
@@ -79,6 +79,8 @@ const VARS = {
   "--duration-read": () => T.duration_read_ms() + "ms", "--stagger": () => T.stagger_ms() + "ms",
   "--blur-form": () => px(T.blur_form()), "--node-size": () => px(T.node_size()), "--diagram-node-min": () => px(T.diagram_node_min()), "--canvas-gap": () => px(T.canvas_gap()),
   "--ease": () => T.ease(),
+  // MOTION.bend's ease_in_out (slow, fast, slow), sampled into a CSS easing: no slow tail at the end.
+  "--ease-in-out": () => "linear(" + Array.from({ length: 21 }, (_, i) => MOTION.ease_in_out(i / 20).toFixed(4)).join(", ") + ")",
   "--chart-tone-1": () => T.chart_tone_1() + "%", "--chart-tone-2": () => T.chart_tone_2() + "%",
   "--chart-tone-3": () => T.chart_tone_3() + "%", "--chart-tone-4": () => T.chart_tone_4() + "%",
   "--chart-gap": () => px(T.chart_gap()), "--chart-lift": () => px(T.chart_lift()),
@@ -97,7 +99,7 @@ const VARS = {
   "--syntax-keyword": () => T.syntax_keyword(), "--syntax-type": () => T.syntax_type(),
   "--syntax-string": () => T.syntax_string(), "--syntax-number": () => T.syntax_number(),
   "--syntax-comment": () => T.syntax_comment(), "--syntax-punct": () => T.syntax_punct(),
-  "--syntax-name": () => T.syntax_name(),
+  "--syntax-name": () => T.syntax_name(), "--syntax-added": () => T.syntax_added(), "--syntax-removed": () => T.syntax_removed(),
 };
 
 for (const [name, get] of Object.entries(VARS)) {
@@ -125,6 +127,46 @@ document.addEventListener("click", (e) => {
   group.querySelectorAll(":scope > button").forEach((b) => b.setAttribute("aria-pressed", b === btn));
   group.dispatchEvent(new CustomEvent("change", { detail: btn, bubbles: true }));
 });
+
+// ---------- Segmented motion: the choice moves ----------
+// .segmented--slide gets a thumb behind the chosen item; on "change" it travels to the new one.
+//   data-motion="stretch": the edge on the side you went reaches first, then the rest follows (ease_in_out).
+//   data-motion="spring": it overshoots a little and settles (ease_spring).
+//   .segmented--extend: icon items; the chosen one also shows its name, and the thumb rides it as it opens.
+// The text changes color in the thumb's time and curve. Reduced motion: the thumb just moves.
+const segLess = matchMedia("(prefers-reduced-motion: reduce)");
+function segPlace(group, animate) {
+  const thumb = group.querySelector(":scope > .segmented__thumb"), on = group.querySelector(':scope > button[aria-pressed="true"]');
+  if (!thumb || !on) return;
+  const to = { left: on.offsetLeft, width: on.offsetWidth }, from = { left: thumb.offsetLeft, width: thumb.offsetWidth };
+  thumb.style.left = to.left + "px"; thumb.style.width = to.width + "px";
+  if (!animate || segLess.matches || (from.left === to.left && from.width === to.width)) return;
+  const px = (o) => ({ left: o.left + "px", width: o.width + "px" });
+  const inOut = getComputedStyle(document.documentElement).getPropertyValue("--ease-in-out").trim() || "ease-in-out";
+  if (group.dataset.motion === "stretch") {
+    const right = to.left > from.left;
+    const mid = right ? { left: from.left, width: to.left + to.width - from.left } : { left: to.left, width: from.left + from.width - to.left };
+    thumb.animate([px(from), { ...px(mid), offset: 0.5 }, px(to)], { duration: T.duration_enter_ms(), easing: inOut });
+  } else {
+    thumb.animate([px(from), px(to)], { duration: T.duration_enter_ms(), easing: group.dataset.motion === "spring" ? T.ease_spring() : inOut });
+  }
+}
+export function initSegmented(group) {
+  if (!group.matches(".segmented--slide, .segmented--extend") || group.querySelector(":scope > .segmented__thumb")) return;
+  const thumb = document.createElement("span"); thumb.className = "segmented__thumb"; thumb.setAttribute("aria-hidden", "true");
+  group.prepend(thumb);
+  group.addEventListener("change", () => {
+    if (!group.classList.contains("segmented--extend")) return segPlace(group, true);
+    const end = performance.now() + T.duration_enter_ms() + T.duration_ms();
+    const ride = (now) => { segPlace(group, false); if (now < end) requestAnimationFrame(ride); };
+    requestAnimationFrame(ride);
+  });
+  new ResizeObserver(() => segPlace(group, false)).observe(group);
+  segPlace(group, false);
+}
+const initSegmentedAll = () => document.querySelectorAll(".segmented--slide, .segmented--extend").forEach(initSegmented);
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initSegmentedAll); else initSegmentedAll();
+document.fonts?.ready.then(() => document.querySelectorAll(".segmented--slide, .segmented--extend").forEach((g) => segPlace(g, false)));
 
 // ---------- Side bar: sections, groups, the rail and the drawer ----------
 // A .side__section is a <button class="side__toggle" aria-expanded> before its <div class="side__items">.
@@ -267,6 +309,63 @@ document.addEventListener("keydown", (e) => {
   items[Math.max(0, next)].focus();
 });
 
+// ---------- Form: check on send ----------
+// <form class="form" data-validate novalidate>: on send, every field is checked (required, type, minlength,
+// pattern; data-error is the message to show). A wrong field gets aria-invalid and its message under it, and a
+// .form__summary at the top lists them all, linked, and takes the focus. If all is right, the submit button
+// (.btn--async) shows busy and the form fires "send" with { data, done(label), fail(message) }: the app sends.
+const ERROR_ICON = '<svg class="icon" aria-hidden="true"><use href="#i-circle-alert"/></svg>';
+function fieldWrong(c) {
+  if (!c.checkValidity()) return true;
+  return c.minLength > 0 && c.value.trim().length < c.minLength;
+}
+export function setFieldError(c, message) {
+  const field = c.closest(".field"); if (!field) return;
+  let foot = field.querySelector(".field__foot");
+  if (!foot) { foot = document.createElement("span"); foot.className = "field__foot"; field.append(foot); }
+  const id = (c.id || (c.id = "field-" + Math.random().toString(36).slice(2, 8))) + "-error";
+  foot.querySelector("#" + CSS.escape(id))?.remove();
+  const ids = (c.getAttribute("aria-describedby") || "").split(/\s+/).filter((x) => x && x !== id);
+  if (message) {
+    const m = document.createElement("span"); m.className = "field__msg field__msg--error"; m.id = id; m.innerHTML = ERROR_ICON;
+    m.append(message); foot.prepend(m);
+    c.setAttribute("aria-invalid", "true"); ids.unshift(id);
+  } else c.removeAttribute("aria-invalid");
+  ids.length ? c.setAttribute("aria-describedby", ids.join(" ")) : c.removeAttribute("aria-describedby");
+}
+const labelOf = (c) => (c.closest(".field")?.querySelector(".field__label")?.childNodes[0]?.textContent || c.name || c.id).trim();
+document.addEventListener("submit", (e) => {
+  const form = e.target.closest?.("form.form[data-validate]"); if (!form) return;
+  e.preventDefault();
+  const wrong = [...form.querySelectorAll("input, textarea, select")].filter((c) => c.willValidate && !c.disabled && !c.readOnly).filter((c) => {
+    const bad = fieldWrong(c); setFieldError(c, bad ? c.dataset.error || c.validationMessage || "Check this field." : null); return bad;
+  });
+  form.querySelector(":scope > .form__summary")?.remove();
+  if (wrong.length) {
+    const s = document.createElement("div"); s.className = "form__summary"; s.setAttribute("role", "alert"); s.tabIndex = -1;
+    s.innerHTML = ERROR_ICON + `<div><p class="item-title">${wrong.length} ${wrong.length === 1 ? "thing" : "things"} to fix</p><ul></ul></div>`;
+    wrong.forEach((c) => { const li = document.createElement("li"), a = document.createElement("a"); a.className = "link"; a.href = "#" + c.id; a.textContent = labelOf(c); li.append(a); s.querySelector("ul").append(li); });
+    form.prepend(s); s.focus();
+    return;
+  }
+  const btn = form.querySelector('[type="submit"].btn--async');
+  if (btn) busy(btn, true);
+  form.dispatchEvent(new CustomEvent("send", { bubbles: true, detail: {
+    data: new FormData(form),
+    done: (label) => (btn ? done(btn, label) : label && announce(label)),
+    fail: (message) => { if (btn) busy(btn, false); if (message) announce(message); },
+  } }));
+});
+// A summary link takes the focus to its field; fixing a field clears its error.
+document.addEventListener("click", (e) => {
+  const a = e.target.closest(".form__summary a"); if (!a) return;
+  e.preventDefault(); document.getElementById(a.getAttribute("href").slice(1))?.focus();
+});
+document.addEventListener("input", (e) => {
+  const c = e.target; if (c.getAttribute?.("aria-invalid") !== "true" || !c.closest("form.form[data-validate]")) return;
+  if (!fieldWrong(c)) setFieldError(c, null);
+});
+
 // ---------- Side bar row actions ----------
 // <div class="side__row"><button class="btn btn--ghost">…</button>
 //   <div class="dropdown side__more"><button class="btn btn--ghost btn--icon btn--sm" aria-haspopup="menu" aria-label="Actions for …">⋯</button><div class="menu menu--end" role="menu" hidden>…</div></div></div>
@@ -379,7 +478,7 @@ document.addEventListener("click", (e) => {
 // A theme changes COLOR, FONT and the controls' SHAPE. Space and sizes stay bound by the laws.
 //   import { theme } from "bend-ui";
 //   theme({ accent: "#ffd21f", accentFg: "#02090a", fontDisplay: { family: "Jaro", src: jaroUrl }, radius: "pill" });
-// radius: "rounded" (default) | "pill" | "sharp", for every button; data-radius on a container does the same inside it.
+// radius: "rounded" (default) | "pill" | "sharp", for every button and segmented; data-radius on a container does the same inside it.
 const THEME_KEYS = {
   bg: "--bg", surface: "--surface", surface2: "--surface-2", border: "--border", borderStrong: "--border-strong",
   text: "--text", text2: "--text-2", text3: "--text-3",

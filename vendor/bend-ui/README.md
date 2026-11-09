@@ -65,47 +65,59 @@ A `.segmented` group switches on click by itself and fires `change` (the button 
 </div>
 ```
 
+Motion: the choice moves. `.segmented--slide` puts a thumb behind the chosen item that travels to the next one (`duration_enter`, `ease_in_out`); `data-motion="stretch"` leads with the edge you went toward, `data-motion="spring"` overshoots a little and settles (`ease_spring`). `.segmented--extend` is for icon items: the chosen one also shows its name, and the thumb rides it as it opens. The text changes color in the thumb's time. Call `initSegmented(group)` for a group added later. Shape follows the buttons: `theme({ radius: "rounded" | "pill" | "sharp" })` or `data-radius` on a container.
+
+```html
+<div class="segmented segmented--slide" data-motion="stretch" role="group" aria-label="Range">…</div>
+<div class="segmented segmented--extend" role="group" aria-label="View">
+  <button aria-pressed="true" aria-label="List"><svg class="icon"><use href="#i-list"/></svg><span class="segmented__more" aria-hidden="true"><span>List</span></span></button>
+  …
+</div>
+```
+
 ## Page, doc and pair
 
 ```html
-<main class="page">
-  <div class="doc doc--stack">            <!-- or doc--split doc--wide, or plain doc -->
-    <div class="doc__columns"><span class="meta">Left</span><span class="meta">Right</span></div>
-    <div class="pair">
-      <div class="block">…</div>
-      <div class="block pair__aside">…</div>   <!-- empty: never shows -->
-    </div>
+<main class="page">                        <!-- the area that scrolls -->
+  <div class="doc">                        <!-- the column: doc (reading width), doc--wide, or doc--full -->
+    …
   </div>
 </main>
 ```
 
-A plain `doc` shows only the blocks; `doc--stack` shows each aside under its block; `doc--split` beside it (a stack on narrow screens). Every block starts at `block_min_lines()` lines; set `--block-min-lines` on a block to change it.
+The page scrolls; the doc is the column inside it, centered at a reading width (`measure`). `doc--wide` goes up to the window's width; `doc--full` takes the whole page, less the gutters (the doc's padding: `space_5` each side, `space_3` on narrow screens).
 
-## Thread and follow
+```html
+<div class="doc doc--split">               <!-- or doc--stack, or a plain doc -->
+  <div class="doc__columns"><span class="meta">Main</span><span class="meta">Aside</span></div>
+  <div class="pair">
+    <div>…</div>
+    <div class="pair__aside">…</div>        <!-- empty: never shows -->
+  </div>
+</div>
+```
 
-A line that ties each block of a `.pair` to its aside while work runs (like writing a law for a sentence), and a page that follows the work.
+A pair puts a second thing with the first: hidden in a plain `doc`, under it in `doc--stack`, beside it in `doc--split` (a stack on narrow screens). The Thread and the Law Editor make pairs of blocks: every block starts at `block_min_lines()` lines; set `--block-min-lines` on a block to change it.
+
+## Thread
+
+A line that ties each block of a `.pair` to its aside while work runs (like writing a law for a sentence).
 
 ```js
 import { createThread, openBlock, formBlock } from "bend-ui/thread";
-import { createFollow } from "bend-ui/follow";
 
 const thread = createThread(doc);
-const follow = createFollow(page, { button: followButton });   // <button class="btn btn--sm window__follow" hidden>
 
 await thread.begin(pairs);                       // the queue cascades in
 for (const [i, pair] of pairs.entries()) {
   const aside = pair.querySelector(".pair__aside");
-  follow.to(pair);
   await Promise.all([openBlock(aside, html), thread.start(i)]);   // working: the line creeps, the node fills
   /* … the work … */
   await Promise.all([formBlock(aside, result, "block--code"), thread.done(i, ok)]);
 }
-follow.stop();
 await thread.end();       // one glint
 await thread.release();   // the blocks get their dots back
 ```
-
-Following pauses when the person scrolls by hand; the button brings it back.
 
 ## Dropdown
 
@@ -328,18 +340,15 @@ A section that opens and closes, on the native `<details>` (keyboard and screen 
 </details>
 ```
 
-## Syntax
+## Code block
 
-Code in color, on a white ground (Snow): Bend, JS (and TS, JSON), CSS, HTML, shell and TOML. `SYNTAX.bend` cuts the code into pieces; `syntax.js` only draws them. Only color changes, so a box keeps its size.
+Code in color, in twelve languages: Bend, JS (and TS, JSON), CSS, HTML, Shell (and TOML, YAML), Python, Rust, Go, SQL, Markdown and Diff. `SYNTAX.bend` cuts the code into pieces (Markdown and Diff a line at a time); `syntax.js` only draws them. A code block has a head (the file or the language, and Copy) and the code line by line; `numbers` adds line numbers, `wrap` breaks long lines, `head: false` leaves Copy in the corner. The code box takes the focus, so a keyboard can scroll long lines.
 
 ```js
-import { highlight, toHtml } from "bend-ui/syntax";
-highlight(document.querySelector(".prose pre"));           // Bend, the default (or a .block--code)
-highlight(document.querySelector(".prose pre"), "html");   // another language
-```
-
-```html
-<pre data-lang="css"><code>.card { padding: var(--space-4); }</code></pre>
+import { codeBlock, upgrade, highlight, toHtml } from "bend-ui/syntax";
+el.innerHTML = codeBlock(code, { lang: "python", name: "laws.py", numbers: true });
+upgrade(document.querySelector('pre[data-lang="sql"]'));   // a <pre> becomes a code block in place
+highlight(document.querySelector(".prose pre"), "html");     // color only, as before
 ```
 
 ## Responsive
@@ -432,23 +441,38 @@ Motion, each for a reason:
 
 ### Input and field
 
+A text field and its label, help and messages. Sizes match buttons (`.input--sm` 24, md 32, `.input--lg` 36, `.input--xl` 48) and the shape follows `theme({ radius })` / `data-radius`. States: `aria-invalid="true"` (error), `.is-valid`, `disabled`, `readonly`. An icon inside: wrap in `.input-icon`. A button inside the field: `.input-group` (one border, one focus ring; joined on the side in sm). Under the field, `.field__help` or a `.field__msg--error` / `--success` (with an icon), and `.field__count`; tie them to the field with `aria-describedby`. The border (text-3) and the placeholder (text-2) are AA.
+
 ```html
-<label class="field">
-  <span class="field__label">Max</span>
-  <input class="input input--mono" value="10">
+<label class="field" for="name">
+  <span class="field__label">Name<span class="field__required">Required</span></span>
+  <input id="name" class="input" aria-invalid="true" aria-describedby="name-msg">
+  <span class="field__foot"><span class="field__msg field__msg--error" id="name-msg"><svg class="icon"><use href="#i-circle-alert"/></svg>Write a name.</span></span>
 </label>
+<span class="input-group"><input class="input" value="https://…"><button class="btn">Copy</button></span>
 ```
 
 ### Form
 
+Fields in a column, `form_gap` apart. `.form__section` + `.form__legend` group related fields (a `fieldset`); `.form__row` puts fields side by side in `.form--columns`; `.form--inline` puts each label in its own column (both stack on narrow screens). Add `data-validate novalidate` and ui.js checks the form on send: a wrong field gets `aria-invalid` and its `data-error` under it, and a `.form__summary` lists every error, linked, and takes the focus. If all is right, the submit button (`.btn--async`) shows busy and the form fires `send` with `{ data, done(label), fail(message) }`.
+
 ```html
-<form class="form">
-  <label class="field"><span class="field__label">Name</span><input class="input"></label>
+<form class="form form--columns" data-validate novalidate>
+  <fieldset class="form__section"><legend class="form__legend">Profile</legend>
+    <div class="form__row">
+      <label class="field" for="first"><span class="field__label">Name</span><input id="first" name="first" class="input" required data-error="Write your name."></label>
+      <label class="field" for="last"><span class="field__label">Last name</span><input id="last" name="last" class="input" required data-error="Write your last name."></label>
+    </div>
+  </fieldset>
   <div class="actions">
     <button class="btn btn--ghost" type="button">Cancel</button>
-    <button class="btn btn--primary">Save</button>
+    <button class="btn btn--filled btn--async" type="submit">…<span class="btn__label">Send</span>…</button>
   </div>
 </form>
+```
+
+```js
+form.addEventListener("send", async (e) => { await save(e.detail.data); e.detail.done("Sent"); });
 ```
 
 ### Tag and kbd
@@ -591,7 +615,7 @@ Row actions: wrap an item (or a section's toggle) in a `.side__row` with a `.dro
 
 | | |
 |---|---|
-| Components | `page`, `doc`, `pair`, `thread` + `node`, `follow`, `chat` + `msg` + `composer`, `disclosure`, `form`, `link`, `dropdown` + `menu`, `btn` (`--primary`, `--ghost`, `--sm`, `--lg`, `--icon`, `--round`, `:disabled`, `[aria-current]`), `input`, `field`, `segmented` (`--icons`), `panel`, `toolbar`, `tag`, `kbd`, `icon`, `rows`/`row`, `art`, `dot`, `status-ring`, `block`, `prose`, `side`, `window`, `agent`, `diagram`, `chart` |
+| Components | `page`, `doc`, `pair`, `thread` + `node`, `chat` + `msg` + `composer`, `disclosure`, `form`, `link`, `dropdown` + `menu`, `btn` (`--primary`, `--ghost`, `--sm`, `--lg`, `--icon`, `--round`, `:disabled`, `[aria-current]`), `input`, `field`, `segmented` (`--icons`), `panel`, `toolbar`, `tag`, `kbd`, `icon`, `rows`/`row`, `art`, `dot`, `status-ring`, `block`, `prose`, `side`, `window`, `agent`, `diagram`, `chart` |
 | Text | `display`, `heading`, `lead`, `text`, `list`, `meta`, `mono` |
 | Icons | plus, arrow-up, shield, github, file-text, scale, triangle-alert, circle-check, x, chevron-down, list, code, wand-sparkles, search, panel-left, book-open, lock, minimize-2, maximize-2, minimize, maximize, text, rows-2, columns-2, heading-1, pilcrow, check |
 | Tokens | space, radius, type, controls, icons, art, status, side bar, window, agent, chat, chart, motion, color (light theme) |
