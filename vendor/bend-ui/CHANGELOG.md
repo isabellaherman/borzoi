@@ -1,5 +1,38 @@
 # Changelog
 
+## 1.1.9 (2026-11-09)
+
+- **Diagram shapes**: a node takes `shape`, one of Mermaid's 14 flowchart shapes by Mermaid's own name: `rect` (Process), `rounded` (Event), `stadium` (Terminal point), `fr-rect` (Subprocess), `cyl` (Database), `circle` (Start), `dbl-circ` (Stop), `odd`, `diam` (Decision), `hex` (Prepare conditional), `lean-r`, `lean-l` (Data input/output, output/input), `trap-b` (Priority action), `trap-t` (Manual operation). An unknown name is the box, with a warning. Every shape takes the five tones and both looks; in the soft look a shape keeps its outline (text-3 or its tone), so it stays 3:1 against the page.
+- `DIAGRAM.bend` decides each shape's size around its text (`shape_w`, `shape_h`, `pad_left`) and where a return arrow and a self-loop meet it (`side_inset`, `top_at`), in whole px. Forward arrows still meet the top and bottom centers, which are on every outline. `diagram.js` draws the outline as an SVG behind the text and redraws it when the node's size changes.
+- **Five new laws** (31 in all): a return arrow meets the outline, a self-loop meets the outline, the text fits inside, a circle is round, and no shape is the box as before. Each is checked on all 14 shapes around four text boxes, against each outline's own equation. `bun run check` now takes about 20 seconds.
+- **Labels on several lines**: a `\n` in a label starts a new line. Rename is a textarea: Shift+Enter adds a line, Enter saves (not while composing with an input method).
+- Screen readers hear a node's shape ("Shape: Decision."). The focus ring follows the shape.
+- **Every diagram**: the box's corner is radius-xs (2px, was 6px), so Process and Event look different. Nodes of different heights in a row are centered, as Mermaid does; equal heights look as before.
+- Fixes: a diagram mounted while hidden (a docs page not shown yet) sized its nodes from zero; it now sizes them when it shows. The arrow memory joined two labels with a line break, which a label can now hold.
+- New tokens: `diagram_circle_min` (64), `diagram_frame` (8), `diagram_cap` (6), `diagram_ring_gap` (4), `shadow_drop` (and its dark value), for a shape's drag shadow.
+- Docs: the Diagram Playground gets a Shape control, and Composition a flowchart with every kind of arrow. The Accessibility table names shapes.
+
+## 1.1.8 (2026-11-09)
+
+- **Dark theme**: a warm near-black, the light theme's stone grays turned over. Light stays the default; `theme({ mode: "dark" })`, or `"system"` to follow the computer. `currentTheme()` says which one shows. Every dark value is in `TOKENS.bend` (`dark_*`), each the gentlest that passes AA, as approved in the Black proposal.
+- **The tones stay**: the accent, danger, success and warning keep their light values in dark. As fills, borders, charts, the focus ring and the agent they need 3:1 and have it on black (3.08, 3.19, 3.99, 4.79). The agent looks the same in both.
+- **Words in a tone** read two new colors, `--accent-text` and `--danger-text` (`color_accent_text`, `color_danger_text`; theme keys `accentText`, `dangerText`): button labels in a tone, links in prose, error messages, accent and danger tags, soft diagram nodes, an agent option's error. In light they are the tone itself, so light doesn't change. In dark they are lighter (5.11 and 5.16:1).
+- **Charts in dark**: all four tones step from the accent toward the text (`dark_chart_tone_2..4`: 88, 74, 58; 3.08 to 6.44:1), so they stay vivid. In light nothing changes.
+- **Code in dark**: GitHub's dark colors on the surface, each 5:1 or more. A floating shadow gets a dark value too.
+- **Tokens move into a stylesheet** (`<style id="bend-ui-tokens">`, first in `<head>`) instead of inline styles on `<html>`, so dark can win over light and an app's own CSS can set any token. `theme()` writes to its own stylesheet and takes `dark: { … }` for colors in dark only.
+- New icons (Lucide): `sun`, `moon`.
+- Docs: a moon/sun button in the toolbar (a ghost icon button, like the side bar's) turns dark on and off; the docs remember it. The Accessibility tables still measure light.
+
+## 1.1.7 (2026-11-09)
+
+- **Small text passes AA**: a new color, `color_text_detail` (`--text-detail`, theme key `textDetail`): text-3 moved 59% toward text-2, the gentlest that gives 4.5:1 on surface, page and surface-2 (4.95, 4.74, 4.50; text-3 was 3.35, 3.21, 3.03). It colors the small text people read: `.meta`, `.detail`, a row's lead and date (`.row__lead`, `.row__meta`), a muted outline item (`.outline__item.is-off`) and a block's placeholder.
+- text-3 doesn't change and keeps what needs only 3:1: lines, borders, chevrons, the diagram's arrows. Code line numbers and the thread's reading pass also keep it (decoration, and text passing by). Nothing else changes.
+- Docs: the Color page shows `--text-detail`.
+
+## 1.1.6 (2026-11-09)
+
+- Docs: **Prose** moves from Foundations to Components in the side bar (after Panel), so its address is now `/components/prose`. The page itself doesn't change.
+
 ## 1.1.5 (2026-11-09)
 
 - **Chart colors pass AA**: the four tones are two lighter and two darker around the accent (`chart_tone_1..4`: 100, 75 toward the surface, 80 and 60 toward the text), each 3:1 or more on the page (5.43, 3.24, 6.94, 8.88; were 5.43, 2.70, 1.73, 1.30). Close to the accent on purpose: protected, not extreme. A hairline of surface always parts a pie's slices, so `.chart--split` is gone.

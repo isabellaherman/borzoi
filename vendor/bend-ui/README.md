@@ -41,7 +41,7 @@ plugins = ["../bend/bend2/main.ts"]
 
 ## Theme
 
-A theme changes only color and font. Space, radius and sizes stay bound by the laws.
+A theme changes color, font, the controls' shape and the mode. Space and sizes stay bound by the laws.
 
 ```js
 import { theme } from "bend-ui";
@@ -53,6 +53,16 @@ theme({
   fontDisplay: { family: "Jaro", src: jaro },
 });
 ```
+
+Light is the default, always. Dark is a warm near-black: `theme({ mode: "dark" })`, or `mode: "system"` to follow the computer (`"light"` goes back). It sets `data-theme` and `color-scheme` on `<html>`; `currentTheme()` says which one shows. The accent, danger, success and warning are the same in both: as fills, borders, charts, the focus ring and the agent they need 3:1, and on black they have it. Only grounds, text and words in a tone change: links and tinted labels read `--accent-text`, error messages `--danger-text` (in light, the tone itself). Every dark value is in `TOKENS.bend` (`dark_*`), each the gentlest that passes AA.
+
+Colors at the top of `theme()` are for light, and for dark wherever dark keeps the same color. Give dark its own with `dark`. An app with its own accent gives its dark text tone and tint:
+
+```js
+theme({ accent: "#ffd21f", accentFg: "#02090a", dark: { accentText: "#ffe066", accentSoft: "#2b2614" } });
+```
+
+The tokens live in a stylesheet first in `<head>`, so an app's own CSS can also set any of them (`:root { --accent: … }`, `:root[data-theme="dark"] { … }`).
 
 ## Segmented
 
@@ -295,6 +305,17 @@ Free layout (optional): pass `positions: [{ x, y }]` (px from the diagram's corn
 Rename (optional): pass `onLabelEdit: (i, label) => …`. A double-click on a node, `F2` on it, or `d.editLabel(i)` (e.g. from its menu) turns the node itself into a field; `Enter` or leaving saves, `Escape` cancels, an empty name shakes and says why. Save the name and draw again: the node keeps its place and the new name forms.
 
 Motion follows what changed, with `MOTION.bend` and the duration tokens: a new node grows out of the node it comes from, a new arrow runs in, a renamed node takes its width while the others make room, and `await d.leave(i)` shrinks a node away before you draw without it. Reduced motion turns it all off.
+
+Shapes (optional): `shape` is one of Mermaid's 14 flowchart shapes, by Mermaid's own name: `rect` (Process), `rounded` (Event), `stadium` (Terminal point), `fr-rect` (Subprocess), `cyl` (Database), `circle` (Start), `dbl-circ` (Stop), `odd` (Odd), `diam` (Decision), `hex` (Prepare conditional), `lean-r` (Data input/output), `lean-l` (Data output/input), `trap-b` (Priority action), `trap-t` (Manual operation). No shape is the box, as before; an unknown name is drawn as the box, with a warning. Each takes the tones and both looks (in the soft look a shape keeps its outline). `DIAGRAM.bend` decides each shape's size around its text and where a return arrow and a self-loop meet it (`shape_w`, `shape_h`, `side_inset`, `top_at`), and the laws prove it on every shape. Screen readers hear the shape ("Shape: Decision."), and the focus ring follows it.
+
+```js
+mountDiagram(el, {
+  nodes: [{ label: "Needs data?", shape: "diam", tone: "accent" }, { label: "Orders", shape: "cyl" }, { label: "Write the answer\nfor the person", shape: "rounded" }],
+  edges: [{ from: 0, to: 1, label: "Yes" }, { from: 0, to: 2, label: "No" }],
+});
+```
+
+Lines: a `\n` in a label starts a new line; in rename, Shift+Enter adds one and Enter saves.
 
 Size: a node is at least `diagram_node_min` wide (128) and grows in `diagram_node_step` steps (24), so short labels don't become chips (`DIAGRAM.bend`: `node_width`). The diagram is never narrower than its widest row, so a wide row makes it wider instead of cutting nodes off; put it in a container that scrolls (an `.area` does).
 
