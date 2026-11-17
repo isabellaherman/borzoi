@@ -1,5 +1,6 @@
 import {test,expect,describe} from 'bun:test';
 import D from '../.build/domain.mjs';
+import A from '../.build/inbox.mjs';
 import G from '../.build/graph.mjs';
 import E from '../.build/edit.mjs';
 import {array,encode,decode,parseBackup} from '../src/workspace/codec.js';
@@ -206,11 +207,11 @@ describe('deleting projects and diagrams',()=>{
 });
 
 describe('agent projects',()=>{
-  const agent=()=>D.create_agent_project(seeded(),'Agent test','bz-testkey');
+  const agent=()=>A.create_agent_project(seeded(),'Agent test','bz-testkey');
   const agentId=w=>array(w.projects).find(p=>p.inbox).id;
   test('a message becomes a new diagram in that project only, and backups keep the key',()=>{
     const w=agent(),before=encode(w).workspace.projects.find(p=>!p.inbox);
-    const next=D.receive(w,agentId(w),'bz-testkey','m1','Test title','flowchart TD\n  A --> B','t');
+    const next=A.receive(w,agentId(w),'bz-testkey','m1','Test title','flowchart TD\n  A --> B','t');
     const saved=encode(next).workspace.projects;
     expect(saved.find(p=>!p.inbox)).toEqual(before);
     const inbox=saved.find(p=>p.inbox);
@@ -220,7 +221,7 @@ describe('agent projects',()=>{
     expect(next.project).toBe(w.project);expect(next.diagram).toBe(w.diagram);
   });
   test('long titles are cut to fit the backup limits',()=>{
-    const w=agent(),next=D.receive(w,agentId(w),'bz-testkey','m1','x'.repeat(500),'flowchart TD','t');
+    const w=agent(),next=A.receive(w,agentId(w),'bz-testkey','m1','x'.repeat(500),'flowchart TD','t');
     expect(()=>decode(encode(next))).not.toThrow();
   });
   test('older backups without keys still load as normal projects',()=>{
