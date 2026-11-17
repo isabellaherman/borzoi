@@ -1,38 +1,38 @@
 # Product laws. Universal laws and finite regression laws are labeled separately.
 import Base
-import ./Domain.bend as D
-import ./Parser.bend as P
-import ./Graph.bend as G
-import ./Edit.bend as E
+import ./workspace/Workspace.bend as D
+import ./diagram/Parser.bend as P
+import ./diagram/Graph.bend as G
+import ./diagram/Edit.bend as E
 
 # UNIVERSAL: typing cannot change any saved version.
 law edit_preserves_history:
-  for +d: D.Document
+  for +d: D.Diagram
   for text: String
   {D.history(D.edit(d, text)) == D.history(d) : List<&2, D.Version>}
 
 # UNIVERSAL: the editor preserves the exact source, including invalid syntax.
 law edit_keeps_exact_text:
-  for d: D.Document
+  for d: D.Diagram
   for +text: String
   {D.source(D.edit(d, text)) == text : String}
 
 # UNIVERSAL: renaming cannot change the diagram's source or its history.
 law rename_preserves_source:
-  for +d: D.Document
+  for +d: D.Diagram
   for name: String
   {D.source(D.rename(d, name)) == D.source(d) : String}
 
 law rename_preserves_history:
-  for +d: D.Document
+  for +d: D.Diagram
   for name: String
   {D.history(D.rename(d, name)) == D.history(d) : List<&2, D.Version>}
 
-# UNIVERSAL: an operation on an unselected document is the identity.
+# UNIVERSAL: an operation on an unselected diagram is the identity.
 law unselected_is_unchanged:
-  for +d: D.Document
+  for +d: D.Diagram
   for a: D.Action
-  {D.maybe_apply(d, a, False{}) == d : D.Document}
+  {D.maybe_apply(d, a, False{}) == d : D.Diagram}
 
 # UNIVERSAL: an unselected project is the identity, for every action.
 law other_project_is_unchanged:
@@ -43,9 +43,9 @@ law other_project_is_unchanged:
 
 # UNIVERSAL: restoration of a missing version is a no-op.
 law missing_restore_is_unchanged:
-  for +d: D.Document
+  for +d: D.Diagram
   for stamp: String
-  {D.restore_version(d, None{}, stamp) == d : D.Document}
+  {D.restore_version(d, None{}, stamp) == d : D.Diagram}
 
 # UNIVERSAL: reading a version never invents one in an empty history.
 law empty_history_has_no_version:
@@ -63,12 +63,12 @@ law view_preserves_projects:
 
 # REGRESSION: restoring keeps both the working source and the old version.
 law restore_retains_work:
-  {D.restore(D.Document{1n, "D", "working", [D.Version{"old", "then"}]}, 0n, "now") ==
-   D.Document{1n, "D", "old", [D.Version{"old", "now"}, D.Version{"working", "now"}, D.Version{"old", "then"}]} : D.Document}
+  {D.restore(D.Diagram{1n, "D", "working", [D.Version{"old", "then"}]}, 0n, "now") ==
+   D.Diagram{1n, "D", "old", [D.Version{"old", "now"}, D.Version{"working", "now"}, D.Version{"old", "then"}]} : D.Diagram}
 
 law unchanged_checkpoint_is_not_duplicated:
-  {D.checkpoint(D.Document{1n, "D", "same", [D.Version{"same", "then"}]}, "now") ==
-   D.Document{1n, "D", "same", [D.Version{"same", "then"}]} : D.Document}
+  {D.checkpoint(D.Diagram{1n, "D", "same", [D.Version{"same", "then"}]}, "now") ==
+   D.Diagram{1n, "D", "same", [D.Version{"same", "then"}]} : D.Diagram}
 
 law arrow_preserves_direction:
   {P.parse("flowchart TD\nA --> B") == P.Graph{[P.Node{"A", "A", 0}, P.Node{"B", "B", 0}], [P.Edge{"A", "B", ""}], "", 0n} : P.Graph}
@@ -86,18 +86,18 @@ law repeated_reference_keeps_label:
 law initial_is_empty:
   {D.initial() == D.Workspace{Nil{}, 1n, 0n, 0n, 1} : D.Workspace}
 
-# UNIVERSAL: a newly created document has no source or invented versions.
-law new_document_is_blank:
+# UNIVERSAL: a newly created diagram has no source or invented versions.
+law new_diagram_is_blank:
   for +id: Nat
   for +name: String
-  {D.new_document(id, name) == D.Document{id, name, "", Nil{}} : D.Document}
+  {D.new_diagram(id, name) == D.Diagram{id, name, "", Nil{}} : D.Diagram}
 
-# UNIVERSAL: checkpointing an untouched blank document invents no version.
+# UNIVERSAL: checkpointing an untouched blank diagram invents no version.
 law blank_checkpoint_has_no_history:
   for +id: Nat
   for +name: String
   for stamp: String
-  {D.checkpoint(D.new_document(id, name), stamp) == D.new_document(id, name) : D.Document}
+  {D.checkpoint(D.new_diagram(id, name), stamp) == D.new_diagram(id, name) : D.Diagram}
 
 # REGRESSION: an empty input event cannot create a project.
 law empty_write_has_no_projects:
@@ -318,18 +318,18 @@ law rename_keeps_the_color:
 
 # REGRESSION: deleting a diagram that isn't open keeps the open one and every other diagram.
 law delete_diagram_keeps_the_rest:
-  {D.delete_diagram(D.Workspace{[D.Project{1n, "P", [D.Document{3n, "B", "b", Nil{}}, D.Document{2n, "A", "a", Nil{}}], "", ""}], 4n, 1n, 2n, 1}, 1n, 3n) ==
-   D.Workspace{[D.Project{1n, "P", [D.Document{2n, "A", "a", Nil{}}], "", ""}], 4n, 1n, 2n, 1} : D.Workspace}
+  {D.delete_diagram(D.Workspace{[D.Project{1n, "P", [D.Diagram{3n, "B", "b", Nil{}}, D.Diagram{2n, "A", "a", Nil{}}], "", ""}], 4n, 1n, 2n, 1}, 1n, 3n) ==
+   D.Workspace{[D.Project{1n, "P", [D.Diagram{2n, "A", "a", Nil{}}], "", ""}], 4n, 1n, 2n, 1} : D.Workspace}
 
 # REGRESSION: deleting the open diagram opens the first diagram left.
 law delete_open_diagram_opens_another:
-  {D.delete_diagram(D.Workspace{[D.Project{1n, "P", [D.Document{3n, "B", "b", Nil{}}, D.Document{2n, "A", "a", Nil{}}], "", ""}], 4n, 1n, 3n, 1}, 1n, 3n) ==
-   D.Workspace{[D.Project{1n, "P", [D.Document{2n, "A", "a", Nil{}}], "", ""}], 4n, 1n, 2n, 1} : D.Workspace}
+  {D.delete_diagram(D.Workspace{[D.Project{1n, "P", [D.Diagram{3n, "B", "b", Nil{}}, D.Diagram{2n, "A", "a", Nil{}}], "", ""}], 4n, 1n, 3n, 1}, 1n, 3n) ==
+   D.Workspace{[D.Project{1n, "P", [D.Diagram{2n, "A", "a", Nil{}}], "", ""}], 4n, 1n, 2n, 1} : D.Workspace}
 
 # REGRESSION: deleting the open project opens a diagram of another project, skipping empty ones.
 law delete_open_project_opens_another:
-  {D.delete_project(D.Workspace{[D.Project{5n, "Q", Nil{}, "", ""}, D.Project{3n, "R", [D.Document{4n, "C", "c", Nil{}}], "", ""}, D.Project{1n, "P", [D.Document{2n, "A", "a", Nil{}}], "", ""}], 6n, 1n, 2n, 1}, 1n) ==
-   D.Workspace{[D.Project{5n, "Q", Nil{}, "", ""}, D.Project{3n, "R", [D.Document{4n, "C", "c", Nil{}}], "", ""}], 6n, 3n, 4n, 1} : D.Workspace}
+  {D.delete_project(D.Workspace{[D.Project{5n, "Q", Nil{}, "", ""}, D.Project{3n, "R", [D.Diagram{4n, "C", "c", Nil{}}], "", ""}, D.Project{1n, "P", [D.Diagram{2n, "A", "a", Nil{}}], "", ""}], 6n, 1n, 2n, 1}, 1n) ==
+   D.Workspace{[D.Project{5n, "Q", Nil{}, "", ""}, D.Project{3n, "R", [D.Diagram{4n, "C", "c", Nil{}}], "", ""}], 6n, 3n, 4n, 1} : D.Workspace}
 
 # REGRESSION: deleting the last project leaves nothing open; ids are never reused.
 law delete_last_project_opens_nothing:
@@ -337,28 +337,28 @@ law delete_last_project_opens_nothing:
 
 # REGRESSION: renaming a diagram that isn't open renames only it and keeps what is open.
 law rename_diagram_renames_only_it:
-  {D.rename_diagram(D.Workspace{[D.Project{1n, "P", [D.Document{3n, "B", "b", Nil{}}, D.Document{2n, "A", "a", Nil{}}], "", ""}], 4n, 1n, 2n, 1}, 1n, 3n, "C") ==
-   D.Workspace{[D.Project{1n, "P", [D.Document{3n, "C", "b", Nil{}}, D.Document{2n, "A", "a", Nil{}}], "", ""}], 4n, 1n, 2n, 1} : D.Workspace}
+  {D.rename_diagram(D.Workspace{[D.Project{1n, "P", [D.Diagram{3n, "B", "b", Nil{}}, D.Diagram{2n, "A", "a", Nil{}}], "", ""}], 4n, 1n, 2n, 1}, 1n, 3n, "C") ==
+   D.Workspace{[D.Project{1n, "P", [D.Diagram{3n, "C", "b", Nil{}}, D.Diagram{2n, "A", "a", Nil{}}], "", ""}], 4n, 1n, 2n, 1} : D.Workspace}
 
 # ---------- Agent projects: a message only adds a diagram ----------
 # UNIVERSAL: a message for another project leaves that project exactly as it was.
 law message_skips_other_projects:
   for +p: D.Project
-  for doc: D.Document
+  for doc: D.Diagram
   for id: String
   {D.deliver(p, doc, id, False{}) == p : D.Project}
 
 # UNIVERSAL: a delivered message adds its diagram and keeps every diagram already there, unchanged.
 law message_keeps_every_diagram:
   for +p: D.Project
-  for +doc: D.Document
+  for +doc: D.Diagram
   for id: String
-  {D.documents(D.deliver(p, doc, id, True{})) == doc <> D.documents(p) : List<&2, D.Document>}
+  {D.diagrams(D.deliver(p, doc, id, True{})) == doc <> D.diagrams(p) : List<&2, D.Diagram>}
 
 # REGRESSION: a message becomes one new diagram, marked as sent by an agent; what is open stays open.
 law message_adds_one_diagram:
-  {D.receive(D.Workspace{[D.Project{1n, "P", [D.Document{2n, "A", "a", Nil{}}], "k", ""}], 3n, 1n, 2n, 1}, 1n, "k", "m1", "Churn", "flowchart TD", "t") ==
-   D.Workspace{[D.Project{1n, "P", [D.Document{3n, "Churn", "%% borzoi from agent\nflowchart TD", Nil{}}, D.Document{2n, "A", "a", Nil{}}], "k", "m1"}], 4n, 1n, 2n, 1} : D.Workspace}
+  {D.receive(D.Workspace{[D.Project{1n, "P", [D.Diagram{2n, "A", "a", Nil{}}], "k", ""}], 3n, 1n, 2n, 1}, 1n, "k", "m1", "Churn", "flowchart TD", "t") ==
+   D.Workspace{[D.Project{1n, "P", [D.Diagram{3n, "Churn", "%% borzoi from agent\nflowchart TD", Nil{}}, D.Diagram{2n, "A", "a", Nil{}}], "k", "m1"}], 4n, 1n, 2n, 1} : D.Workspace}
 
 # REGRESSION: a wrong key changes nothing.
 law wrong_key_changes_nothing:
@@ -382,8 +382,8 @@ law sender_is_read:
 # REGRESSION: a new key replaces the old one; a normal project gets none.
 # REGRESSION: a project you made gets an inbox key and keeps its diagrams; other projects don't change.
 law connect_agent_gives_a_key:
-  {D.connect_agent(D.Workspace{[D.Project{1n, "P", [D.Document{2n, "A", "a", Nil{}}], "", ""}, D.Project{3n, "Q", Nil{}, "", ""}], 4n, 1n, 2n, 1}, 1n, "k") ==
-   D.Workspace{[D.Project{1n, "P", [D.Document{2n, "A", "a", Nil{}}], "k", ""}, D.Project{3n, "Q", Nil{}, "", ""}], 4n, 1n, 2n, 1} : D.Workspace}
+  {D.connect_agent(D.Workspace{[D.Project{1n, "P", [D.Diagram{2n, "A", "a", Nil{}}], "", ""}, D.Project{3n, "Q", Nil{}, "", ""}], 4n, 1n, 2n, 1}, 1n, "k") ==
+   D.Workspace{[D.Project{1n, "P", [D.Diagram{2n, "A", "a", Nil{}}], "k", ""}, D.Project{3n, "Q", Nil{}, "", ""}], 4n, 1n, 2n, 1} : D.Workspace}
 
 # REGRESSION: connecting a project that already has a key keeps that key (agents that have it keep working).
 law connect_agent_keeps_a_key:
@@ -392,8 +392,8 @@ law connect_agent_keeps_a_key:
 
 # REGRESSION: once connected, a message becomes a new diagram beside yours.
 law connected_project_receives:
-  {D.receive(D.connect_agent(D.Workspace{[D.Project{1n, "P", [D.Document{2n, "A", "a", Nil{}}], "", ""}], 3n, 1n, 2n, 1}, 1n, "k"), 1n, "k", "m1", "Churn", "flowchart TD", "t") ==
-   D.Workspace{[D.Project{1n, "P", [D.Document{3n, "Churn", "%% borzoi from agent\nflowchart TD", Nil{}}, D.Document{2n, "A", "a", Nil{}}], "k", "m1"}], 4n, 1n, 2n, 1} : D.Workspace}
+  {D.receive(D.connect_agent(D.Workspace{[D.Project{1n, "P", [D.Diagram{2n, "A", "a", Nil{}}], "", ""}], 3n, 1n, 2n, 1}, 1n, "k"), 1n, "k", "m1", "Churn", "flowchart TD", "t") ==
+   D.Workspace{[D.Project{1n, "P", [D.Diagram{3n, "Churn", "%% borzoi from agent\nflowchart TD", Nil{}}, D.Diagram{2n, "A", "a", Nil{}}], "k", "m1"}], 4n, 1n, 2n, 1} : D.Workspace}
 
 law new_key_replaces_the_old:
   {D.new_key(D.Workspace{[D.Project{1n, "P", Nil{}, "k", "m1"}, D.Project{2n, "Q", Nil{}, "", ""}], 3n, 0n, 0n, 1}, 1n, "n") ==
@@ -405,24 +405,24 @@ law normal_project_gets_no_key:
 
 # UNIVERSAL: an update for another diagram leaves it exactly as it was.
 law update_skips_other_diagrams:
-  for +d: D.Document
+  for +d: D.Diagram
   for text: String
   for stamp: String
-  {D.refresh(d, text, stamp, False{}) == d : D.Document}
+  {D.refresh(d, text, stamp, False{}) == d : D.Diagram}
 
 # UNIVERSAL: an update shows the agent's new text.
 law update_shows_the_new_text:
-  for d: D.Document
+  for d: D.Diagram
   for +text: String
   for +stamp: String
   {D.source(D.refresh(d, text, stamp, True{})) == text : String}
 
 # REGRESSION: the same title updates the agent's diagram; the old text is kept in its history.
 law same_title_updates_with_history:
-  {D.receive(D.Workspace{[D.Project{1n, "P", [D.Document{2n, "Churn", "%% borzoi from Grok\nflowchart TD", Nil{}}], "k", "m1"}], 3n, 1n, 2n, 1}, 1n, "k", "m2", "Churn", "%% borzoi from Grok\nflowchart TD\n  A --> B", "t") ==
-   D.Workspace{[D.Project{1n, "P", [D.Document{2n, "Churn", "%% borzoi from Grok\nflowchart TD\n  A --> B", [D.Version{"%% borzoi from Grok\nflowchart TD\n  A --> B", "t"}, D.Version{"%% borzoi from Grok\nflowchart TD", "t"}]}], "k", "m2"}], 3n, 1n, 2n, 1} : D.Workspace}
+  {D.receive(D.Workspace{[D.Project{1n, "P", [D.Diagram{2n, "Churn", "%% borzoi from Grok\nflowchart TD", Nil{}}], "k", "m1"}], 3n, 1n, 2n, 1}, 1n, "k", "m2", "Churn", "%% borzoi from Grok\nflowchart TD\n  A --> B", "t") ==
+   D.Workspace{[D.Project{1n, "P", [D.Diagram{2n, "Churn", "%% borzoi from Grok\nflowchart TD\n  A --> B", [D.Version{"%% borzoi from Grok\nflowchart TD\n  A --> B", "t"}, D.Version{"%% borzoi from Grok\nflowchart TD", "t"}]}], "k", "m2"}], 3n, 1n, 2n, 1} : D.Workspace}
 
 # REGRESSION: your own diagram is never updated by an agent; a message with its name becomes a new diagram.
 law your_diagram_is_never_updated:
-  {D.receive(D.Workspace{[D.Project{1n, "P", [D.Document{2n, "Churn", "flowchart TD", Nil{}}], "k", ""}], 3n, 1n, 2n, 1}, 1n, "k", "m1", "Churn", "flowchart TD", "t") ==
-   D.Workspace{[D.Project{1n, "P", [D.Document{3n, "Churn", "%% borzoi from agent\nflowchart TD", Nil{}}, D.Document{2n, "Churn", "flowchart TD", Nil{}}], "k", "m1"}], 4n, 1n, 2n, 1} : D.Workspace}
+  {D.receive(D.Workspace{[D.Project{1n, "P", [D.Diagram{2n, "Churn", "flowchart TD", Nil{}}], "k", ""}], 3n, 1n, 2n, 1}, 1n, "k", "m1", "Churn", "flowchart TD", "t") ==
+   D.Workspace{[D.Project{1n, "P", [D.Diagram{3n, "Churn", "%% borzoi from agent\nflowchart TD", Nil{}}, D.Diagram{2n, "Churn", "flowchart TD", Nil{}}], "k", "m1"}], 4n, 1n, 2n, 1} : D.Workspace}

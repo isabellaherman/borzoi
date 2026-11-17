@@ -1,12 +1,12 @@
-import { createFeedback, createDialog, configureSourceEditor, createSidebar, setStatusTone } from '../vendor/bend-ui/workspace.js';
-import { mountDiagram, SHAPES } from '../vendor/bend-ui/diagram.js';
-import { tokens as T, done, announce } from '../vendor/bend-ui/ui.js';
-import D from './Domain.bend';
-import metadata from '../package.json';
-import G from './Graph.bend';
-import E from './Edit.bend';
-import { array, encode, decode, parseBackup, MAX_SOURCE, MAX_BACKUP_BYTES } from './codec.js';
-import { openStorage, StorageConflict, manualNoteSeen, markManualNoteSeen } from './storage.js';
+import { createFeedback, createDialog, configureSourceEditor, createSidebar, setStatusTone } from '../../vendor/bend-ui/workspace.js';
+import { mountDiagram, SHAPES } from '../../vendor/bend-ui/diagram.js';
+import { tokens as T, done, announce } from '../../vendor/bend-ui/ui.js';
+import D from '../workspace/Workspace.bend';
+import metadata from '../../package.json';
+import G from '../diagram/Graph.bend';
+import E from '../diagram/Edit.bend';
+import { array, encode, decode, parseBackup, MAX_SOURCE, MAX_BACKUP_BYTES } from '../workspace/codec.js';
+import { openStorage, StorageConflict, manualNoteSeen, markManualNoteSeen } from '../workspace/storage.js';
 
 const $=s=>document.querySelector(s);
 const ui={source:$('#source'),diagram:$('#diagram'),notice:$('#notice'),status:$('#save-status'),modal:$('#modal')};
@@ -18,7 +18,7 @@ $('#app-version').textContent=`Borzoi · ${metadata.version}`;
 let workspace=D.initial(),store,revision=0,saves=Promise.resolve(),pending=0,dirty=false,locked=false,saveError=false;
 let mounted=null,lastGood=null,previewTimer=null,recoveryPayload=null;
 const graphCache=new Map();
-const graphKey=()=>`${workspace.project}:${workspace.document}`;
+const graphKey=()=>`${workspace.project}:${workspace.diagram}`;
 const stamp=()=>new Date().toISOString();
 const doc=()=>{const v=D.current(workspace);return v.$==='Some'?v.value:null;};
 const project=()=>array(workspace.projects).find(p=>p.id===workspace.project);
@@ -56,9 +56,9 @@ function renderNavigation(){
     const group=element('div','side__section'),head=element('button','btn btn--ghost side__toggle'),items=element('div','side__items');
     head.type='button';head.title=p.name;head.setAttribute('aria-expanded','true');
     head.append(icon(p.inbox?'wand-sparkles':'file-text'),element('span','side__text',p.name),icon('chevron-down','icon icon--sm side__chevron'));
-    for(const d of array(p.documents)){
+    for(const d of array(p.diagrams)){
       const from=D.sender(d.source),b=navButton(d.name,()=>switchTo(p.id,d.id),from?'wand-sparkles':undefined);if(from)b.title=`${d.name} · from ${from}`;
-      if(d.id===workspace.document&&p.id===workspace.project)b.setAttribute('aria-current','page');
+      if(d.id===workspace.diagram&&p.id===workspace.project)b.setAttribute('aria-current','page');
       items.append(sideRow(b,d.name,[
         menuItem('Rename','pencil',()=>nameDialog('Rename diagram',d.name,value=>change(D.rename_diagram(workspace,p.id,d.id,value),{navigation:true}))),
         element('hr','separator'),menuItem('Delete','trash-2',()=>deleteDiagram(p,d)),
@@ -220,7 +220,7 @@ function confirmDelete(title,text,onDelete){
   body.append(element('p','text',text),element('p','detail','This can\'t be undone. Download a backup first if you may need it.'),actions);
 }
 const diagrams=n=>n===1?'1 diagram':`${n} diagrams`;
-function deleteProject(p){const n=array(p.documents).length;confirmDelete('Delete project?',`Delete “${p.name}” and its ${diagrams(n)}, with their history?`,()=>{checkpoint();change(D.delete_project(workspace,p.id),{navigation:true});notice('Project deleted.');});}
+function deleteProject(p){const n=array(p.diagrams).length;confirmDelete('Delete project?',`Delete “${p.name}” and its ${diagrams(n)}, with their history?`,()=>{checkpoint();change(D.delete_project(workspace,p.id),{navigation:true});notice('Project deleted.');});}
 function deleteDiagram(p,d){confirmDelete('Delete diagram?',`Delete “${d.name}” and its history?`,()=>{change(D.delete_diagram(workspace,p.id,d.id),{navigation:true});notice('Diagram deleted.');});}
 function download(data,filename,type){const url=URL.createObjectURL(new Blob([data],{type})),a=document.createElement('a');a.href=url;a.download=filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 function backup(){download(JSON.stringify(recoveryPayload??{...encode(workspace),exportedAt:stamp()},null,2),`borzoi-${recoveryPayload?'recovery':'backup'}-${new Date().toISOString().slice(0,10)}.json`,'application/json');}
@@ -229,7 +229,7 @@ $('#new-project').querySelector('.menu').append(
   menuItem('Agent project','wand-sparkles',()=>nameDialog('New agent project','',name=>{const id=workspace.next_id;checkpoint();change(D.create_agent_project(workspace,name,newKey()),{navigation:true});agentInstructions(id);})),
 );
 // Agent projects: agents send plain Mermaid to the project's inbox on ntfy.sh, a free public message relay. The key is
-// the inbox's name, made at random here. Borzoi fetches what arrived; Domain.bend turns each message into a new
+// the inbox's name, made at random here. Borzoi fetches what arrived; Workspace.bend turns each message into a new
 // diagram in that project only (it never changes a diagram that exists). ntfy.sh keeps messages for about 12 hours.
 const INBOX='https://ntfy.sh/';
 function newKey(){const abc='abcdefghijkmnpqrstuvwxyz23456789';return 'bz-'+Array.from(crypto.getRandomValues(new Uint8Array(20)),b=>abc[b%32]).join('');}

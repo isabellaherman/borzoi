@@ -1,4 +1,4 @@
-// IndexedDB I/O adapter. Workspace mutations live in Domain.bend.
+// IndexedDB I/O adapter. Workspace mutations live in Workspace.bend.
 export class StorageConflict extends Error { constructor(){super('This workspace changed in another tab. Download your current backup, then reload to continue.');this.name='StorageConflict';} }
 export async function openStorage(factory=globalThis.indexedDB) {
   if(!factory)throw new Error('Local storage is unavailable in this browser.');

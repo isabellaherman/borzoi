@@ -1,6 +1,6 @@
 import {test,expect} from 'bun:test';
 import D from '../.build/domain.mjs';
-import {array,encode,decode,parseBackup} from '../src/codec.js';
+import {array,encode,decode,parseBackup} from '../src/workspace/codec.js';
 const current=w=>D.current(w).value;
 const snapshot=w=>JSON.stringify(encode(w));
 const oldSource='flowchart TD\n  A[Ask a question] --> B[Gather evidence]\n  B --> C[Compare approaches]\n  C --> D[Test an idea]\n  D --> E[Record what changed]\n';
@@ -12,7 +12,7 @@ test('fresh production workspace opens an empty editor without seeded records',(
   expect(snapshot(D.update(w,{$:'Checkpoint',stamp:'now'}))).toBe(snapshot(w));
   expect(snapshot(parseBackup(JSON.stringify(encode(w))))).toBe(snapshot(w));
 });
-test('the first user input creates one document and preserves the exact draft',()=>{
+test('the first user input creates one diagram and preserves the exact draft',()=>{
   let w=D.write_source(D.initial(),'unfinished → ação');
   expect(array(w.projects)).toHaveLength(1);expect(current(w).source).toBe('unfinished → ação');expect(array(current(w).history)).toEqual([]);
   const id=current(w).id;w=D.write_source(w,'flowchart TD\nA --> B');

@@ -3,33 +3,33 @@ import Base
 
 type Version is Data:
   Version{source: String, stamp: String}
-type Document is Data:
-  Document{id: Nat, name: String, source: String, history: List<&2, Version>}
+type Diagram is Data:
+  Diagram{id: Nat, name: String, source: String, history: List<&2, Version>}
 type Project is Data:
-  Project{id: Nat, name: String, documents: List<&2, Document>, inbox: String, seen: String}
+  Project{id: Nat, name: String, diagrams: List<&2, Diagram>, inbox: String, seen: String}
 type Workspace is Data:
-  Workspace{projects: List<&2, Project>, next_id: Nat, project: Nat, document: Nat, mode: U32}
+  Workspace{projects: List<&2, Project>, next_id: Nat, project: Nat, diagram: Nat, mode: U32}
 type Action is Data:
   Write{source: String}
   Checkpoint{stamp: String}
   Restore{index: Nat, stamp: String}
   Rename{name: String}
 
-def source(d: Document) -> String:
+def source(d: Diagram) -> String:
   match d:
-    case Document{i, n, s, h}: s
+    case Diagram{i, n, s, h}: s
 
-def history(d: Document) -> List<&2, Version>:
+def history(d: Diagram) -> List<&2, Version>:
   match d:
-    case Document{i, n, s, h}: h
+    case Diagram{i, n, s, h}: h
 
-def edit(d: Document, text: String) -> Document:
+def edit(d: Diagram, text: String) -> Diagram:
   match d:
-    case Document{i, n, s, h}: Document{i, n, text, h}
+    case Diagram{i, n, s, h}: Diagram{i, n, text, h}
 
-def rename(d: Document, name: String) -> Document:
+def rename(d: Diagram, name: String) -> Diagram:
   match d:
-    case Document{i, n, s, h}: Document{i, name, s, h}
+    case Diagram{i, n, s, h}: Diagram{i, name, s, h}
 
 def checkpoint_history(xs: List<&2, Version>, +text: String, stamp: String) -> List<&2, Version>:
   match xs:
@@ -39,9 +39,9 @@ def checkpoint_history(xs: List<&2, Version>, +text: String, stamp: String) -> L
         Version{old, time} <> tail,
         Version{text, stamp} <> Version{old, time} <> tail)
 
-def checkpoint(d: Document, stamp: String) -> Document:
+def checkpoint(d: Diagram, stamp: String) -> Diagram:
   match d:
-    case Document{i, n, +s, h}: Document{i, n, s, checkpoint_history(h, s, stamp)}
+    case Diagram{i, n, +s, h}: Diagram{i, n, s, checkpoint_history(h, s, stamp)}
 
 def version_at(xs: List<&2, Version>, i: Nat) -> Maybe<&2, Version>:
   match xs i:
@@ -49,90 +49,90 @@ def version_at(xs: List<&2, Version>, i: Nat) -> Maybe<&2, Version>:
     case h <> t 0n: Some{h}
     case h <> t 1n+k: version_at(t, k)
 
-def restore_version(d: Document, v: Maybe<&2, Version>, +stamp: String) -> Document:
+def restore_version(d: Diagram, v: Maybe<&2, Version>, +stamp: String) -> Diagram:
   match v:
     case None{}: d
     case Some{Version{text, time}}: checkpoint(edit(checkpoint(d, stamp), text), stamp)
 
-def restore(+d: Document, index: Nat, stamp: String) -> Document:
+def restore(+d: Diagram, index: Nat, stamp: String) -> Diagram:
   restore_version(d, version_at(history(d), index), stamp)
 
-def apply(d: Document, a: Action) -> Document:
+def apply(d: Diagram, a: Action) -> Diagram:
   match a:
     case Write{text}: edit(d, text)
     case Checkpoint{stamp}: checkpoint(d, stamp)
     case Restore{i, stamp}: restore(d, i, stamp)
     case Rename{name}: rename(d, name)
 
-def maybe_apply(+d: Document, a: Action, selected: Bool) -> Document:
+def maybe_apply(+d: Diagram, a: Action, selected: Bool) -> Diagram:
   match selected:
     case False{}: d
     case True{}: apply(d, a)
 
-def edit_documents(ds: List<&2, Document>, +id: Nat, +a: Action) -> List<&2, Document>:
+def edit_diagrams(ds: List<&2, Diagram>, +id: Nat, +a: Action) -> List<&2, Diagram>:
   match ds:
     case Nil{}: Nil{}
-    case Document{+i, n, s, h} <> t:
-      maybe_apply(Document{i, n, s, h}, a, Nat.is_eq(i, id)) <> edit_documents(t, id, a)
+    case Diagram{+i, n, s, h} <> t:
+      maybe_apply(Diagram{i, n, s, h}, a, Nat.is_eq(i, id)) <> edit_diagrams(t, id, a)
 
 def edit_project(p: Project, id: Nat, a: Action, selected: Bool) -> Project:
   match p selected:
     case Project{i, n, ds, k, sn} False{}: Project{i, n, ds, k, sn}
-    case Project{i, n, ds, k, sn} True{}: Project{i, n, edit_documents(ds, id, a), k, sn}
+    case Project{i, n, ds, k, sn} True{}: Project{i, n, edit_diagrams(ds, id, a), k, sn}
 
-def edit_projects(ps: List<&2, Project>, +project: Nat, +document: Nat, +a: Action) -> List<&2, Project>:
+def edit_projects(ps: List<&2, Project>, +project: Nat, +diagram: Nat, +a: Action) -> List<&2, Project>:
   match ps:
     case Nil{}: Nil{}
     case Project{+i, n, ds, k, sn} <> t:
-      edit_project(Project{i, n, ds, k, sn}, document, a, Nat.is_eq(i, project)) <> edit_projects(t, project, document, a)
+      edit_project(Project{i, n, ds, k, sn}, diagram, a, Nat.is_eq(i, project)) <> edit_projects(t, project, diagram, a)
 
 def update(w: Workspace, a: Action) -> Workspace:
   match w:
     case Workspace{ps, next, +p, +d, mode}: Workspace{edit_projects(ps, p, d, a), next, p, d, mode}
 
-def find_document(ds: List<&2, Document>, +id: Nat) -> Maybe<&2, Document>:
+def find_diagram(ds: List<&2, Diagram>, +id: Nat) -> Maybe<&2, Diagram>:
   match ds:
     case Nil{}: None{}
-    case Document{+i, +n, +s, +h} <> t:
-      Bool.pick(Maybe<&2, Document>, Nat.is_eq(i, id), Some{Document{i, n, s, h}}, find_document(t, id))
+    case Diagram{+i, +n, +s, +h} <> t:
+      Bool.pick(Maybe<&2, Diagram>, Nat.is_eq(i, id), Some{Diagram{i, n, s, h}}, find_diagram(t, id))
 
-def find_project(ps: List<&2, Project>, +project: Nat, +document: Nat) -> Maybe<&2, Document>:
+def find_project(ps: List<&2, Project>, +project: Nat, +diagram: Nat) -> Maybe<&2, Diagram>:
   match ps:
     case Nil{}: None{}
     case Project{i, n, ds, k, sn} <> t:
-      Bool.pick(Maybe<&2, Document>, Nat.is_eq(i, project), find_document(ds, document), find_project(t, project, document))
+      Bool.pick(Maybe<&2, Diagram>, Nat.is_eq(i, project), find_diagram(ds, diagram), find_project(t, project, diagram))
 
-def current(w: Workspace) -> Maybe<&2, Document>:
+def current(w: Workspace) -> Maybe<&2, Diagram>:
   match w:
     case Workspace{ps, next, p, d, mode}: find_project(ps, p, d)
 
-def open_checked(w: Workspace, project: Nat, document: Nat, exists: Maybe<&2, Document>) -> Workspace:
+def open_checked(w: Workspace, project: Nat, diagram: Nat, exists: Maybe<&2, Diagram>) -> Workspace:
   match w exists:
     case Workspace{ps, next, p, d, mode} None{}: Workspace{ps, next, p, d, mode}
-    case Workspace{ps, next, p, d, mode} Some{doc}: Workspace{ps, next, project, document, mode}
+    case Workspace{ps, next, p, d, mode} Some{doc}: Workspace{ps, next, project, diagram, mode}
 
-def open(+w: Workspace, +project: Nat, +document: Nat) -> Workspace:
+def open(+w: Workspace, +project: Nat, +diagram: Nat) -> Workspace:
   match w:
     case Workspace{+ps, next, p, d, mode}:
-      open_checked(Workspace{ps, next, p, d, mode}, project, document, find_project(ps, project, document))
+      open_checked(Workspace{ps, next, p, d, mode}, project, diagram, find_project(ps, project, diagram))
 
 def set_mode(w: Workspace, mode: U32) -> Workspace:
   match w:
     case Workspace{ps, next, p, d, m}: Workspace{ps, next, p, d, Bool.pick(U32, U32.is_eq(mode, 1), 1, 0)}
 
-def new_document(id: Nat, name: String) -> Document:
-  Document{id, name, "", Nil{}}
+def new_diagram(id: Nat, name: String) -> Diagram:
+  Diagram{id, name, "", Nil{}}
 
 def create_project(w: Workspace, name: String) -> Workspace:
   match w:
     case Workspace{ps, +next, p, d, mode}:
-      Workspace{Project{next, name, [new_document(1n+next, "Untitled diagram")], "", ""} <> ps, 2n+next, next, 1n+next, 1}
+      Workspace{Project{next, name, [new_diagram(1n+next, "Untitled diagram")], "", ""} <> ps, 2n+next, next, 1n+next, 1}
 
-def add_document(ps: List<&2, Project>, +id: Nat, +doc: Document) -> List<&2, Project>:
+def add_diagram(ps: List<&2, Project>, +id: Nat, +doc: Diagram) -> List<&2, Project>:
   match ps:
     case Nil{}: Nil{}
     case Project{+i, n, +ds, k, sn} <> t:
-      Project{i, n, Bool.pick(List<&2, Document>, Nat.is_eq(i, id), doc <> ds, ds), k, sn} <> add_document(t, id, doc)
+      Project{i, n, Bool.pick(List<&2, Diagram>, Nat.is_eq(i, id), doc <> ds, ds), k, sn} <> add_diagram(t, id, doc)
 
 def has_project(ps: List<&2, Project>, +id: Nat) -> Bool:
   match ps:
@@ -143,7 +143,7 @@ def create_diagram_checked(w: Workspace, +project: Nat, name: String, valid: Boo
   match w valid:
     case Workspace{ps, next, p, d, mode} False{}: Workspace{ps, next, p, d, mode}
     case Workspace{ps, +next, p, d, mode} True{}:
-      Workspace{add_document(ps, project, new_document(next, name)), 1n+next, project, next, 1}
+      Workspace{add_diagram(ps, project, new_diagram(next, name)), 1n+next, project, next, 1}
 
 def create_diagram(w: Workspace, +project: Nat, name: String) -> Workspace:
   match w:
@@ -160,27 +160,27 @@ def rename_project(w: Workspace, id: Nat, name: String) -> Workspace:
   match w:
     case Workspace{ps, next, p, d, mode}: Workspace{rename_projects(ps, id, name), next, p, d, mode}
 
-def document_count(ds: List<&2, Document>) -> Nat:
+def diagram_count(ds: List<&2, Diagram>) -> Nat:
   match ds:
     case Nil{}: 0n
-    case h <> t: 1n+document_count(t)
+    case h <> t: 1n+diagram_count(t)
 
 def project_span(ps: List<&2, Project>) -> Nat:
   match ps:
     case Nil{}: 0n
-    case Project{i, n, ds, k, sn} <> t: (1n + document_count(ds) + project_span(t) : Nat)
+    case Project{i, n, ds, k, sn} <> t: (1n + diagram_count(ds) + project_span(t) : Nat)
 
-def reindex_documents(ds: List<&2, Document>, +next: Nat) -> List<&2, Document>:
+def reindex_diagrams(ds: List<&2, Diagram>, +next: Nat) -> List<&2, Diagram>:
   match ds:
     case Nil{}: Nil{}
-    case Document{i, n, s, h} <> t:
-      Document{next, n, s, h} <> reindex_documents(t, 1n+next)
+    case Diagram{i, n, s, h} <> t:
+      Diagram{next, n, s, h} <> reindex_diagrams(t, 1n+next)
 
 def reindex_projects(ps: List<&2, Project>, +next: Nat) -> List<&2, Project>:
   match ps:
     case Nil{}: Nil{}
     case Project{i, n, +ds, k, sn} <> t:
-      Project{next, n, reindex_documents(ds, 1n+next), k, sn} <> reindex_projects(t, (next + 1n + document_count(ds) : Nat))
+      Project{next, n, reindex_diagrams(ds, 1n+next), k, sn} <> reindex_projects(t, (next + 1n + diagram_count(ds) : Nat))
 
 def append_projects(a: List<&2, Project>, b: List<&2, Project>) -> List<&2, Project>:
   match a:
@@ -189,8 +189,8 @@ def append_projects(a: List<&2, Project>, b: List<&2, Project>) -> List<&2, Proj
 
 def select_first(w: Workspace) -> Workspace:
   match w:
-    case Workspace{Project{+pid, name, Document{+did, title, text, h} <> ds, k, sn} <> ps, next, p, d, mode}:
-      Workspace{Project{pid, name, Document{did, title, text, h} <> ds, k, sn} <> ps, next, pid, did, mode}
+    case Workspace{Project{+pid, name, Diagram{+did, title, text, h} <> ds, k, sn} <> ps, next, p, d, mode}:
+      Workspace{Project{pid, name, Diagram{did, title, text, h} <> ds, k, sn} <> ps, next, pid, did, mode}
     case other: other
 
 def import_projects(w: Workspace, +incoming: List<&2, Project>) -> Workspace:
@@ -207,8 +207,8 @@ def legacy_demo_source() -> String:
 def initial() -> Workspace:
   Workspace{Nil{}, 1n, 0n, 0n, 1}
 
-# Materialize a document only when the user writes their first source.
-def write_source_checked(+w: Workspace, +text: String, selected: Maybe<&2, Document>) -> Workspace:
+# Materialize a diagram only when the user writes their first source.
+def write_source_checked(+w: Workspace, +text: String, selected: Maybe<&2, Diagram>) -> Workspace:
   match selected:
     case Some{d}: update(w, Write{text})
     case None{}:
@@ -221,7 +221,7 @@ def write_source(+w: Workspace, text: String) -> Workspace:
 # Only the exact, unmodified original demo workspace is removable.
 def is_legacy_demo(w: Workspace) -> Bool:
   match w:
-    case Workspace{[Project{1n, pn, [Document{2n, dn, text, [Version{old, time}]}], k, sn}], 3n, 1n, 2n, mode}:
+    case Workspace{[Project{1n, pn, [Diagram{2n, dn, text, [Version{old, time}]}], k, sn}], 3n, 1n, 2n, mode}:
       String.eq(pn, "Research notebook") && String.eq(dn, "A research flow") &&
       String.eq(text, legacy_demo_source()) && String.eq(old, legacy_demo_source()) && String.eq(time, "Created")
     case other: False{}
@@ -232,9 +232,9 @@ def remove_legacy_demo(+w: Workspace) -> Workspace:
 # ---------- Delete a project or a diagram ----------
 # Only the chosen one goes. If it was open, the first diagram left opens; with none left, nothing is open.
 type Location is Data:
-  Location{project: Nat, document: Nat}
+  Location{project: Nat, diagram: Nat}
 
-def keep_document(d: Document, drop: Bool, rest: List<&2, Document>) -> List<&2, Document>:
+def keep_diagram(d: Diagram, drop: Bool, rest: List<&2, Diagram>) -> List<&2, Diagram>:
   match drop:
     case True{}: rest
     case False{}: d <> rest
@@ -244,11 +244,11 @@ def keep_project(p: Project, drop: Bool, rest: List<&2, Project>) -> List<&2, Pr
     case True{}: rest
     case False{}: p <> rest
 
-def drop_documents(ds: List<&2, Document>, +id: Nat) -> List<&2, Document>:
+def drop_diagrams(ds: List<&2, Diagram>, +id: Nat) -> List<&2, Diagram>:
   match ds:
     case Nil{}: Nil{}
-    case Document{+i, n, s, h} <> t:
-      keep_document(Document{i, n, s, h}, Nat.is_eq(i, id), drop_documents(t, id))
+    case Diagram{+i, n, s, h} <> t:
+      keep_diagram(Diagram{i, n, s, h}, Nat.is_eq(i, id), drop_diagrams(t, id))
 
 def drop_project(ps: List<&2, Project>, +id: Nat) -> List<&2, Project>:
   match ps:
@@ -256,16 +256,16 @@ def drop_project(ps: List<&2, Project>, +id: Nat) -> List<&2, Project>:
     case Project{+i, n, ds, k, sn} <> t:
       keep_project(Project{i, n, ds, k, sn}, Nat.is_eq(i, id), drop_project(t, id))
 
-def drop_diagram(ps: List<&2, Project>, +project: Nat, +document: Nat) -> List<&2, Project>:
+def drop_diagram(ps: List<&2, Project>, +project: Nat, +diagram: Nat) -> List<&2, Project>:
   match ps:
     case Nil{}: Nil{}
     case Project{+i, n, +ds, k, sn} <> t:
-      Project{i, n, Bool.pick(List<&2, Document>, Nat.is_eq(i, project), drop_documents(ds, document), ds), k, sn} <> drop_diagram(t, project, document)
+      Project{i, n, Bool.pick(List<&2, Diagram>, Nat.is_eq(i, project), drop_diagrams(ds, diagram), ds), k, sn} <> drop_diagram(t, project, diagram)
 
 def first_location(ps: List<&2, Project>) -> Maybe<&2, Location>:
   match ps:
     case Nil{}: None{}
-    case Project{i, n, Document{did, dn, s, h} <> ds, k, sn} <> t: Some{Location{i, did}}
+    case Project{i, n, Diagram{did, dn, s, h} <> ds, k, sn} <> t: Some{Location{i, did}}
     case Project{i, n, Nil{}, k, sn} <> t: first_location(t)
 
 def reselect(w: Workspace, there: Maybe<&2, Location>) -> Workspace:
@@ -273,7 +273,7 @@ def reselect(w: Workspace, there: Maybe<&2, Location>) -> Workspace:
     case Workspace{ps, next, p, d, mode} None{}: Workspace{ps, next, 0n, 0n, mode}
     case Workspace{ps, next, p, d, mode} Some{Location{lp, ld}}: Workspace{ps, next, lp, ld, mode}
 
-def settle_checked(w: Workspace, here: Maybe<&2, Document>, first: Maybe<&2, Location>) -> Workspace:
+def settle_checked(w: Workspace, here: Maybe<&2, Diagram>, first: Maybe<&2, Location>) -> Workspace:
   match here:
     case Some{doc}: w
     case None{}: reselect(w, first)
@@ -287,14 +287,14 @@ def delete_project(w: Workspace, +id: Nat) -> Workspace:
   match w:
     case Workspace{ps, next, p, d, mode}: settle(Workspace{drop_project(ps, id), next, p, d, mode})
 
-def delete_diagram(w: Workspace, +project: Nat, +document: Nat) -> Workspace:
+def delete_diagram(w: Workspace, +project: Nat, +diagram: Nat) -> Workspace:
   match w:
-    case Workspace{ps, next, p, d, mode}: settle(Workspace{drop_diagram(ps, project, document), next, p, d, mode})
+    case Workspace{ps, next, p, d, mode}: settle(Workspace{drop_diagram(ps, project, diagram), next, p, d, mode})
 
 # Rename any diagram by its ids, open or not.
-def rename_diagram(w: Workspace, +project: Nat, +document: Nat, name: String) -> Workspace:
+def rename_diagram(w: Workspace, +project: Nat, +diagram: Nat, name: String) -> Workspace:
   match w:
-    case Workspace{ps, next, p, d, mode}: Workspace{edit_projects(ps, project, document, Rename{name}), next, p, d, mode}
+    case Workspace{ps, next, p, d, mode}: Workspace{edit_projects(ps, project, diagram, Rename{name}), next, p, d, mode}
 
 # ---------- Agent projects ----------
 # An agent project has an inbox key (a normal project has none: ""). Agents send that inbox plain text, and each
@@ -330,8 +330,8 @@ def marked(+text: String) -> String:
 def received_name(+title: String) -> String:
   Bool.pick(String, String.is_empty(String.trim(title)), "Agent diagram", String.take(String.trim(title), 60n))
 
-def received(id: Nat, title: String, text: String) -> Document:
-  Document{id, received_name(title), String.take(marked(text), 9000n), Nil{}}
+def received(id: Nat, title: String, text: String) -> Diagram:
+  Diagram{id, received_name(title), String.take(marked(text), 9000n), Nil{}}
 
 # Only the chosen project, only when the key matches and the message is new.
 def can_receive(ps: List<&2, Project>, +project: Nat, +key: String, +id: String) -> Bool:
@@ -340,12 +340,12 @@ def can_receive(ps: List<&2, Project>, +project: Nat, +key: String, +id: String)
     case Project{i, n, ds, k, sn} <> t:
       (Nat.is_eq(i, project) && String.eq(k, key) && Bool.not(String.eq(sn, id)) && Bool.not(String.is_empty(key))) || can_receive(t, project, key, id)
 
-def deliver(p: Project, doc: Document, id: String, selected: Bool) -> Project:
+def deliver(p: Project, doc: Diagram, id: String, selected: Bool) -> Project:
   match p selected:
     case Project{i, n, ds, k, sn} False{}: Project{i, n, ds, k, sn}
     case Project{i, n, ds, k, sn} True{}: Project{i, n, doc <> ds, k, id}
 
-def deliver_projects(ps: List<&2, Project>, +project: Nat, +id: String, +doc: Document) -> List<&2, Project>:
+def deliver_projects(ps: List<&2, Project>, +project: Nat, +id: String, +doc: Diagram) -> List<&2, Project>:
   match ps:
     case Nil{}: Nil{}
     case Project{+i, n, ds, k, sn} <> t:
@@ -355,29 +355,29 @@ def deliver_projects(ps: List<&2, Project>, +project: Nat, +id: String, +doc: Do
 # A message whose title names a diagram the agents sent before (it has a sender line) is a newer version of it:
 # the current text goes to history first, so nothing is lost. Your own diagrams are never updated this way;
 # a message with their name becomes a new diagram.
-def is_agent_named(d: Document, +name: String) -> Bool:
+def is_agent_named(d: Diagram, +name: String) -> Bool:
   match d:
-    case Document{i, n, s, h}: String.eq(n, name) && Bool.not(String.is_empty(sender(s)))
+    case Diagram{i, n, s, h}: String.eq(n, name) && Bool.not(String.is_empty(sender(s)))
 
-def has_agent_named(ds: List<&2, Document>, +name: String) -> Bool:
+def has_agent_named(ds: List<&2, Diagram>, +name: String) -> Bool:
   match ds:
     case Nil{}: False{}
     case +d <> t: is_agent_named(d, name) || has_agent_named(t, name)
 
-def refresh(d: Document, +text: String, +stamp: String, selected: Bool) -> Document:
+def refresh(d: Diagram, +text: String, +stamp: String, selected: Bool) -> Diagram:
   match selected:
     case False{}: d
     case True{}: checkpoint(edit(checkpoint(d, stamp), text), stamp)
 
-def refresh_documents(ds: List<&2, Document>, +name: String, +text: String, +stamp: String) -> List<&2, Document>:
+def refresh_diagrams(ds: List<&2, Diagram>, +name: String, +text: String, +stamp: String) -> List<&2, Diagram>:
   match ds:
     case Nil{}: Nil{}
-    case +d <> t: refresh(d, text, stamp, is_agent_named(d, name)) <> refresh_documents(t, name, text, stamp)
+    case +d <> t: refresh(d, text, stamp, is_agent_named(d, name)) <> refresh_diagrams(t, name, text, stamp)
 
 def refresh_project(p: Project, +name: String, +text: String, +stamp: String, +id: String, selected: Bool) -> Project:
   match p selected:
     case Project{i, n, ds, k, sn} False{}: Project{i, n, ds, k, sn}
-    case Project{i, n, ds, k, sn} True{}: Project{i, n, refresh_documents(ds, name, text, stamp), k, id}
+    case Project{i, n, ds, k, sn} True{}: Project{i, n, refresh_diagrams(ds, name, text, stamp), k, id}
 
 def refresh_projects(ps: List<&2, Project>, +project: Nat, +name: String, +text: String, +stamp: String, +id: String) -> List<&2, Project>:
   match ps:
@@ -430,6 +430,6 @@ def connect_agent(w: Workspace, +project: Nat, key: String) -> Workspace:
   match w:
     case Workspace{ps, next, p, d, mode}: Workspace{connect_projects(ps, project, key), next, p, d, mode}
 
-def documents(p: Project) -> List<&2, Document>:
+def diagrams(p: Project) -> List<&2, Diagram>:
   match p:
     case Project{i, n, ds, k, sn}: ds

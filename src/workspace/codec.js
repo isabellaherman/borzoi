@@ -5,8 +5,8 @@ export const MAX_BACKUP_BYTES = 20 * 1024 * 1024;
 export const list = xs => xs.reduceRight((tail, head) => ({ $: 'Con', head, tail }), { $: 'Nil' });
 export function array(xs) { const out=[]; for(let p=xs;p.$==='Con';p=p.tail)out.push(p.head); return out; }
 export function encode(w) {
-  return {format:FORMAT,version:1,workspace:{nextId:w.next_id,projectId:w.project,documentId:w.document,mode:w.mode,
-    projects:array(w.projects).map(p=>({id:p.id,name:p.name,...(p.inbox?{inbox:p.inbox,seen:p.seen}:{}),diagrams:array(p.documents).map(d=>({id:d.id,name:d.name,source:d.source,history:array(d.history).map(v=>({source:v.source,stamp:v.stamp}))}))}))}};
+  return {format:FORMAT,version:1,workspace:{nextId:w.next_id,projectId:w.project,documentId:w.diagram,mode:w.mode,
+    projects:array(w.projects).map(p=>({id:p.id,name:p.name,...(p.inbox?{inbox:p.inbox,seen:p.seen}:{}),diagrams:array(p.diagrams).map(d=>({id:d.id,name:d.name,source:d.source,history:array(d.history).map(v=>({source:v.source,stamp:v.stamp}))}))}))}};
 }
 function object(x, at) { if(!x || typeof x!=='object' || Array.isArray(x))throw new Error(`${at} must be an object.`); return x; }
 function text(x, at, limit) { if(typeof x!=='string' || x.length>limit)throw new Error(`${at} must be text, at most ${limit} characters.`);return x; }
@@ -23,16 +23,16 @@ export function decode(raw) {
     const docs=items(p.diagrams,'Diagrams').map(d=>{
       object(d,'Diagram');const did=unique(d.id);any=true;
       if(pid===w.projectId && did===w.documentId)selected=true;
-      return {$:'Document',id:did,name:name(d.name,'Diagram name'),source:text(d.source,'Diagram source',MAX_SOURCE),history:list(items(d.history,'History').map(v=>{object(v,'Version');return {$:'Version',source:text(v.source,'Version source',MAX_SOURCE),stamp:text(v.stamp,'Version date',120)};}))};
+      return {$:'Diagram',id:did,name:name(d.name,'Diagram name'),source:text(d.source,'Diagram source',MAX_SOURCE),history:list(items(d.history,'History').map(v=>{object(v,'Version');return {$:'Version',source:text(v.source,'Version source',MAX_SOURCE),stamp:text(v.stamp,'Version date',120)};}))};
     });
-    // An agent project carries its inbox key and the last message received (Domain.bend); older backups have neither.
-    return {$:'Project',id:pid,name:name(p.name,'Project name'),documents:list(docs),inbox:p.inbox===undefined?'':text(p.inbox,'Inbox key',120),seen:p.seen===undefined?'':text(p.seen,'Last message',120)};
+    // An agent project carries its inbox key and the last message received (Workspace.bend); older backups have neither.
+    return {$:'Project',id:pid,name:name(p.name,'Project name'),diagrams:list(docs),inbox:p.inbox===undefined?'':text(p.inbox,'Inbox key',120),seen:p.seen===undefined?'':text(p.seen,'Last message',120)};
   });
-  // A project may have no diagrams (Domain.bend allows it: deleting its last one). With no diagram anywhere, nothing is open.
+  // A project may have no diagrams (Workspace.bend allows it: deleting its last one). With no diagram anywhere, nothing is open.
   if(any ? !selected : w.projectId!==0 || w.documentId!==0)throw new Error('The selected diagram is missing from the backup.');
   if(!Number.isSafeInteger(w.nextId)||w.nextId<=maximum)throw new Error('The backup contains an invalid ID counter.');
   if(w.mode!==0 && w.mode!==1)throw new Error('Invalid editor mode.');
-  return {$:'Workspace',projects:list(projects),next_id:w.nextId,project:w.projectId,document:w.documentId,mode:w.mode};
+  return {$:'Workspace',projects:list(projects),next_id:w.nextId,project:w.projectId,diagram:w.documentId,mode:w.mode};
 }
 export function parseBackup(value) {
   if(new TextEncoder().encode(value).byteLength>MAX_BACKUP_BYTES)throw new Error('This backup is too large (20 MB maximum).');

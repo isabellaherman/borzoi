@@ -11,17 +11,17 @@ test('original CSS override failure cannot reenter the app',()=>{
     ['src/app.css','.side {width: 999px}'],
     ['index.html','<style>.input {border:0}</style>'],
     ['index.html','<input class="input" style="border:0">'],
-    ['src/main.js',"input.style.border='0'"],
-    ['src/main.js',"input.setAttribute('style','border:0')"],
-    ['src/main.js',"document.adoptedStyleSheets=[sheet]"],
-    ['src/main.js',"import './custom.css'"],
-    ['src/main.js',"element('div','brand-symbol','B')"],
-    ['src/main.js',"el.className='project-header'"],
-    ['src/main.js',"el.classList.add('my-override')"],
+    ['src/app/main.js',"input.style.border='0'"],
+    ['src/app/main.js',"input.setAttribute('style','border:0')"],
+    ['src/app/main.js',"document.adoptedStyleSheets=[sheet]"],
+    ['src/app/main.js',"import './custom.css'"],
+    ['src/app/main.js',"element('div','brand-symbol','B')"],
+    ['src/app/main.js',"el.className='project-header'"],
+    ['src/app/main.js',"el.classList.add('my-override')"],
   ])expect(inspectSource(name,source,known).length).toBeGreaterThan(0);
 });
 test('registered component composition passes',()=>{
-  expect(inspectSource('src/main.js',"element('input','input'); button.classList.add('btn'); side.classList.toggle('is-open');",known)).toEqual([]);
+  expect(inspectSource('src/app/main.js',"element('input','input'); button.classList.add('btn'); side.classList.toggle('is-open');",known)).toEqual([]);
 });
 test('snapshot mutations, omissions and extra styles fail',()=>{
   const dir=mkdtempSync(join(tmpdir(),'borzoi-ui-boundary-'));

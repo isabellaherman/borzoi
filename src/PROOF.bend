@@ -1,22 +1,22 @@
 import Base
-import ./Domain.bend as D
+import ./workspace/Workspace.bend as D
 import ./LAWS.bend as L
 
 def L.edit_preserves_history(d, text):
   match d:
-    case D.Document{i, n, s, h}: {==}
+    case D.Diagram{i, n, s, h}: {==}
 
 def L.edit_keeps_exact_text(d, text):
   match d:
-    case D.Document{i, n, s, h}: {==}
+    case D.Diagram{i, n, s, h}: {==}
 
 def L.rename_preserves_source(d, name):
   match d:
-    case D.Document{i, n, s, h}: {==}
+    case D.Diagram{i, n, s, h}: {==}
 
 def L.rename_preserves_history(d, name):
   match d:
-    case D.Document{i, n, s, h}: {==}
+    case D.Diagram{i, n, s, h}: {==}
 
 def L.unselected_is_unchanged(d, a): {==}
 
@@ -35,7 +35,7 @@ def L.incomplete_arrow_is_rejected(): {==}
 def L.repeated_reference_keeps_label(): {==}
 
 def L.initial_is_empty(): {==}
-def L.new_document_is_blank(id, name): {==}
+def L.new_diagram_is_blank(id, name): {==}
 def L.blank_checkpoint_has_no_history(id, name, stamp): {==}
 def L.empty_write_has_no_projects(): {==}
 
@@ -119,7 +119,7 @@ def L.update_skips_other_diagrams(d, text, stamp): {==}
 
 def L.update_shows_the_new_text(d, text, stamp):
   match d:
-    case D.Document{i, n, s, h}: {==}
+    case D.Diagram{i, n, s, h}: {==}
 
 def L.same_title_updates_with_history(): {==}
 def L.your_diagram_is_never_updated(): {==}

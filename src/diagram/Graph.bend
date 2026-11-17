@@ -1,8 +1,8 @@
 # Validate the subset before passing it to Bend-UI's top-to-bottom layout.
 import Base
 import ./Parser.bend as P
-import ../vendor/bend-ui/DIAGRAM.bend as D
-import ../vendor/bend-ui/TOKENS.bend as T
+import ../../vendor/bend-ui/DIAGRAM.bend as D
+import ../../vendor/bend-ui/TOKENS.bend as T
 
 def count_nodes(ns: List<&2, P.Node>) -> Nat:
   match ns:

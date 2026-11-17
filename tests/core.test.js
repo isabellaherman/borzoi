@@ -2,7 +2,7 @@ import {test,expect,describe} from 'bun:test';
 import D from '../.build/domain.mjs';
 import G from '../.build/graph.mjs';
 import E from '../.build/edit.mjs';
-import {array,encode,decode,parseBackup} from '../src/codec.js';
+import {array,encode,decode,parseBackup} from '../src/workspace/codec.js';
 
 const current=w=>D.current(w).value;
 const history=w=>array(current(w).history);
@@ -64,8 +64,8 @@ describe('workspace invariants',()=>{
     const b=encode(seeded());b.workspace.projects[0].diagrams[0].id=1;expect(()=>decode(b)).toThrow('duplicate');
     const c=encode(seeded());c.workspace.nextId=1;expect(()=>decode(c)).toThrow('counter');
     const d=encode(seeded());d.workspace.documentId=999;expect(()=>decode(d)).toThrow('missing');
-    // A project left with no diagrams (its last one deleted) still loads, as Domain.bend allows it.
-    const e=encode(D.delete_diagram(seeded(),array(seeded().projects)[0].id,array(array(seeded().projects)[0].documents)[0].id));
+    // A project left with no diagrams (its last one deleted) still loads, as Workspace.bend allows it.
+    const e=encode(D.delete_diagram(seeded(),array(seeded().projects)[0].id,array(array(seeded().projects)[0].diagrams)[0].id));
     expect(()=>decode(e)).not.toThrow();expect(snapshot(decode(e))).toBe(snapshot(decode(encode(decode(e)))));
   });
 });
@@ -186,15 +186,15 @@ describe('deleting projects and diagrams',()=>{
     const w=two(),first=encode(w).workspace.projects[1];
     const next=D.delete_project(w,first.id);
     expect(array(next.projects).map(p=>p.name)).toEqual(['Other']);
-    expect(next.project).toBe(w.project);expect(next.document).toBe(w.document);
+    expect(next.project).toBe(w.project);expect(next.diagram).toBe(w.diagram);
   });
   test('deleting the open diagram opens another, and its history goes with it',()=>{
-    let w=two();const test=array(w.projects)[1],[second,start]=array(test.documents);
+    let w=two();const test=array(w.projects)[1],[second,start]=array(test.diagrams);
     w=D.open(w,test.id,second.id);const next=D.delete_diagram(w,test.id,second.id);
-    expect(array(array(next.projects)[1].documents).map(d=>d.name)).toEqual([start.name]);
+    expect(array(array(next.projects)[1].diagrams).map(d=>d.name)).toEqual([start.name]);
     // The first diagram left in the list opens: here, the newer project's.
     const other=array(next.projects)[0];
-    expect(next.project).toBe(other.id);expect(next.document).toBe(array(other.documents)[0].id);
+    expect(next.project).toBe(other.id);expect(next.diagram).toBe(array(other.diagrams)[0].id);
   });
   test('ids are never reused after a delete',()=>{
     const w=D.delete_project(two(),two().project),next=D.create_project(w,'New');
@@ -217,7 +217,7 @@ describe('agent projects',()=>{
     expect(inbox).toMatchObject({inbox:'bz-testkey',seen:'m1'});
     expect(inbox.diagrams[0]).toMatchObject({name:'Test title',source:'%% borzoi from agent\nflowchart TD\n  A --> B'});
     expect(snapshot(decode(encode(next)))).toBe(snapshot(next));
-    expect(next.project).toBe(w.project);expect(next.document).toBe(w.document);
+    expect(next.project).toBe(w.project);expect(next.diagram).toBe(w.diagram);
   });
   test('long titles are cut to fit the backup limits',()=>{
     const w=agent(),next=D.receive(w,agentId(w),'bz-testkey','m1','x'.repeat(500),'flowchart TD','t');
