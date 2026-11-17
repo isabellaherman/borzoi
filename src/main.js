@@ -1,5 +1,5 @@
 import { createFeedback, createDialog, configureSourceEditor, createSidebar, setStatusTone } from '../vendor/bend-ui/workspace.js';
-import { mountDiagram } from '../vendor/bend-ui/diagram.js';
+import { mountDiagram, SHAPES } from '../vendor/bend-ui/diagram.js';
 import { tokens as T, done, announce } from '../vendor/bend-ui/ui.js';
 import D from './Domain.bend';
 import metadata from '../package.json';
@@ -76,7 +76,7 @@ function graphData(result,source){
   const nodes=array(result.nodes),edges=array(result.edges),ids=new Map(nodes.map((n,i)=>[n.id,i]));
   // A node's color is the last of the lib's four tones its Mermaid classes give it (Graph.bend).
   const tones=new Map();for(const t of array(G.tones(source)))tones.set(t.id,t.tone);
-  return {ids:nodes.map(n=>n.id),nodes:nodes.map(n=>({label:n.label,tone:tones.get(n.id)??''})),edges:edges.map(e=>({from:ids.get(e.from),to:ids.get(e.to),label:e.label}))};
+  return {ids:nodes.map(n=>n.id),nodes:nodes.map(n=>({label:n.label,tone:tones.get(n.id)??'',shape:G.shape_name(n.shape)})),edges:edges.map(e=>({from:ids.get(e.from),to:ids.get(e.to),label:e.label}))};
 }
 // Editing from the diagram: the menu on a node, dragging between nodes and the manual layout. Every change is
 // Mermaid written by Bend: Graph.bend adds a line at the end, Edit.bend rewrites only the lines that mention
@@ -103,6 +103,28 @@ function colorItem(name,tone,checked,onClick){
   text.append(element('span',tone?`tag tag--${tone}`:'tag',name));b.append(menuIcon(''),text,menuIcon('check','icon icon--sm menu__check'));b.addEventListener('click',onClick);return b;
 }
 const group=items=>items.length?[element('hr','separator'),...items]:[];
+// Node shapes: Borzoi's numbers (Parser.bend), most used first; the name is Mermaid's description (Bend-UI SHAPES).
+const SHAPE_ORDER=[0,1,5,3,2,4,6,7,8,9,10,11,12,13];
+const shapeLabel=code=>code===0?'Process':SHAPES[G.shape_name(code)]?.[1]??'Process';
+const shapeCode=name=>SHAPE_ORDER.find(code=>G.shape_name(code)===(name??''))??0;
+// A Shape field: the lib's Dropdown, one menuitemradio per shape with its Mermaid syntax as a tag.
+function shapeField(initial){
+  let chosen=initial;const field=element('div','field'),caption=element('span','field__label','Shape');caption.id='shape-caption';
+  const trigger=element('button','btn');trigger.type='button';trigger.setAttribute('aria-haspopup','menu');trigger.setAttribute('aria-expanded','false');
+  const show=()=>{trigger.replaceChildren(element('span','',shapeLabel(chosen)),icon('chevron-down','icon icon--sm'));trigger.setAttribute('aria-label',`Shape: ${shapeLabel(chosen)}`);};
+  const items=SHAPE_ORDER.map(code=>{
+    const b=element('button','menu__item'),text=element('span','',shapeLabel(code));b.type='button';b.setAttribute('role','menuitemradio');b.setAttribute('aria-checked',String(code===chosen));b.dataset.shape=String(code);
+    b.append(menuIcon(''),text,element('span','tag tag--mono',`${G.shape_open(code)} ${G.shape_close(code)}`),menuIcon('check','icon icon--sm menu__check'));
+    b.addEventListener('click',()=>{chosen=code;items.forEach(x=>x.setAttribute('aria-checked',String(x.dataset.shape===String(code))));show();});return b;
+  });
+  show();field.append(caption,dropdown(trigger,items));return {element:field,value:()=>chosen};
+}
+function shapeDialog(initial,onSubmit){
+  const body=openModal('Node shape'),form=element('form','form'),shape=shapeField(initial);
+  const actions=element('div','actions'),submit=element('button','btn btn--primary','Save');submit.type='submit';actions.append(button('Cancel',()=>ui.modal.close()),submit);
+  form.append(shape.element,actions);body.append(form);
+  form.addEventListener('submit',e=>{e.preventDefault();ui.modal.close();if(shape.value()!==initial)onSubmit(shape.value());});
+}
 function dropdown(trigger,items,end=false){const dd=element('div','dropdown'),menu=element('div',end?'menu menu--end':'menu');menu.setAttribute('role','menu');menu.hidden=true;menu.append(...items);dd.append(trigger,menu);return dd;}
 // A side bar row: the item, then the lib's ⋯ menu at its end (Bend-UI 1.0.12 .side__row). Right-click opens it too.
 function sideRow(item,label,items){
@@ -117,9 +139,10 @@ function diagramActions(data){
     onConnect:({source:a,target:b})=>writeFromDiagram(G.connect(currentSource(),id(a),id(b))),
     // The node opens the lib's Dropdown menu; its items are built as any Dropdown menu's (Bend-UI 1.0.10).
     nodeMenu:i=>locked?[]:[
-      menuItem('Add node below','plus',()=>nameDialog('Add node below','',label=>writeFromDiagram(G.add_node_below(currentSource(),id(i),label)))),
-      ...next(i).map(j=>menuItem(`Add node before ${data.nodes[j].label}`,'plus',()=>nameDialog('Add node between','',label=>writeFromDiagram(E.insert_between(currentSource(),id(i),id(j),label))))),
+      menuItem('Add node below','plus',()=>nameDialog('Add node below','',(label,shape)=>writeFromDiagram(G.add_node_below_as(currentSource(),id(i),label,shape)),0)),
+      ...next(i).map(j=>menuItem(`Add node before ${data.nodes[j].label}`,'plus',()=>nameDialog('Add node between','',(label,shape)=>writeFromDiagram(E.insert_between_as(currentSource(),id(i),id(j),label,shape)),0))),
       menuItem('Rename','text',()=>nameDialog('Rename node',data.nodes[i].label,label=>writeFromDiagram(E.rename(currentSource(),id(i),label)))),
+      menuItem(`Shape: ${shapeLabel(shapeCode(data.nodes[i].shape))}`,'square-round-corner',()=>shapeDialog(shapeCode(data.nodes[i].shape),shape=>writeFromDiagram(E.set_shape(currentSource(),id(i),shape)))),
       ...group(data.nodes.map((n,j)=>allowed(i,j)?menuItem(i===j?'Connect to itself':`Connect to ${n.label}`,'',()=>writeFromDiagram(G.connect(currentSource(),id(i),id(j)))):null).filter(Boolean)),
       ...group(COLORS.map(([color,tone,name])=>colorItem(name,tone,tone===data.nodes[i].tone,()=>{if(tone!==data.nodes[i].tone)writeFromDiagram(E.set_tone(currentSource(),id(i),color));}))),
       ...group([...next(i).map(j=>menuItem(`Remove arrow to ${data.nodes[j].label}`,'x',()=>writeFromDiagram(E.remove_edge(currentSource(),id(i),id(j))))),menuItem('Delete node','x',()=>writeFromDiagram(E.delete_node(currentSource(),id(i))))]),
@@ -184,10 +207,12 @@ function render(){
   renderMode();renderGraph();document.title='Borzoi — Diagrams';
 }
 function openModal(title){return modal.open(title);}
-function nameDialog(title,initial,onSubmit){
+// With a shape (a node being added), the dialog also has a Shape field; onSubmit gets (name, shape).
+function nameDialog(title,initial,onSubmit,shape=null){
   const body=openModal(title),form=element('form','form'),label=element('label','field'),caption=element('span','field__label','Name'),input=element('input','input');input.value=initial;input.required=true;input.maxLength=120;label.append(caption,input);
-  const actions=element('div','actions'),cancel=button('Cancel',()=>ui.modal.close()),submit=element('button','btn btn--primary','Save');submit.type='submit';actions.append(cancel,submit);form.append(label,actions);body.append(form);
-  form.addEventListener('submit',e=>{e.preventDefault();const value=input.value.trim();if(!value){input.setCustomValidity('Enter a name.');input.reportValidity();return;}ui.modal.close();onSubmit(value);});input.addEventListener('input',()=>input.setCustomValidity(''));input.focus();input.select();
+  const picker=shape===null?null:shapeField(shape);
+  const actions=element('div','actions'),cancel=button('Cancel',()=>ui.modal.close()),submit=element('button','btn btn--primary','Save');submit.type='submit';actions.append(cancel,submit);form.append(label,...(picker?[picker.element]:[]),actions);body.append(form);
+  form.addEventListener('submit',e=>{e.preventDefault();const value=input.value.trim();if(!value){input.setCustomValidity('Enter a name.');input.reportValidity();return;}ui.modal.close();onSubmit(value,picker?.value()??0);});input.addEventListener('input',()=>input.setCustomValidity(''));input.focus();input.select();
 }
 function confirmDelete(title,text,onDelete){
   const body=openModal(title),actions=element('div','actions');
@@ -227,7 +252,7 @@ flowchart TD
   B -->|label on the arrow| C[Another step]:::red
 
 Rules:
-- Use only flowchart TD, nodes like A[Text], arrows --> and arrow labels -->|text|.
+- Use only flowchart TD, nodes like A[Text], arrows --> and arrow labels -->|text|. Mermaid node shapes are fine where they help: A{Decision?}, A[(Database)], A([Start or end]).
 - Color a node with :::red, :::yellow, :::green or :::blue.
 - Make one tree that reads top to bottom: a single starting node, and every other node reachable from it. Never leave a second group with no arrow to the first.
 - At most 4 arrows out of any node. With more items, group them under intermediate nodes (for example "High priority", "Medium priority").
@@ -290,7 +315,7 @@ $('#mode').querySelector('.menu').append(...MODES.map(([mode,label,iconName],i)=
 ui.source.maxLength=MAX_SOURCE;
 ui.source.addEventListener('input',()=>{const firstWrite=!doc();change(D.write_source(workspace,ui.source.value),{navigation:firstWrite});clearTimeout(previewTimer);previewTimer=setTimeout(renderGraph,180);});
 ui.source.addEventListener('blur',()=>{if(!locked)checkpoint();});
-$('#add-node').onclick=()=>{if(!currentSource().trim()||!G.parse(currentSource()).error)nameDialog('Add node','',label=>writeFromDiagram(G.add_node(currentSource(),label)));else notice('Correct the source before adding nodes.',true);};
+$('#add-node').onclick=()=>{if(!currentSource().trim()||!G.parse(currentSource()).error)nameDialog('Add node','',(label,shape)=>writeFromDiagram(G.add_node_as(currentSource(),label,shape)),0);else notice('Correct the source before adding nodes.',true);};
 // Press and hold the lock: the lib's status ring fills (data-status="hold", duration_slow); once full it waits,
 // and letting go switches the layout. Letting go early or leaving the button cancels. A plain click does nothing.
 {const lock=$('#layout');let timer=null;
@@ -314,7 +339,7 @@ $('#history').onclick=()=>{
   if(!versions.length)list.append(element('p','detail','No saved versions yet.'));
   versions.forEach((v,i)=>{const item=element('article',''),head=element('div','revision-list__header'),date=Number.isNaN(Date.parse(v.stamp))?v.stamp:new Date(v.stamp).toLocaleString();const restore=button('Restore',()=>{change(D.update(workspace,{$:'Restore',index:i,stamp:stamp()}),{navigation:true});ui.modal.close();notice('Version restored. Your previous work is in history.');});head.append(element('span','item-title',`${i===0?'Latest · ':''}${date}`),restore);item.append(head,element('pre','revision-list__source',v.source));list.append(item);});
 };
-$('#syntax-help').onclick=()=>{const body=openModal('A small, familiar syntax');body.append(element('p','text','Start with flowchart TD or graph TD. Add named nodes, square labels and arrows.'),element('pre','revision-list__source','flowchart TD\n  A[Question] --> B[Evidence]\n  B -->|supports| C[Conclusion]\n  %% A comment\n  D["A label with punctuation"]'),element('p','detail','You can chain arrows, use semicolons and reuse node IDs. Color a node with A:::blue, A:::green, A:::yellow or A:::red (classDef lines are kept for other tools). This first version supports top-to-bottom flows with rectangular nodes, up to 60 nodes and 120 connections. Return loops and arrows from a node to itself are fine. Decisions A{Question?} and [/slanted/] shapes are read and show as boxes for now. Arrow text can be written A -- yes --> B or A -->|yes| B, and #quot; in a label is a double quote. Rounded shapes, subgraphs, style lines and other directions are not supported yet. Unsupported source remains saved.'));};
+$('#syntax-help').onclick=()=>{const body=openModal('A small, familiar syntax');body.append(element('p','text','Start with flowchart TD or graph TD. Add named nodes, square labels and arrows.'),element('pre','revision-list__source','flowchart TD\n  A[Question] --> B[Evidence]\n  B -->|supports| C[Conclusion]\n  %% A comment\n  D["A label with punctuation"]'),element('p','detail','You can chain arrows, use semicolons and reuse node IDs. Color a node with A:::blue, A:::green, A:::yellow or A:::red (classDef lines are kept for other tools). This first version supports top-to-bottom flows with rectangular nodes, up to 60 nodes and 120 connections. Return loops and arrows from a node to itself are fine. All 14 Mermaid node shapes work: A{Decision?}, A[(Database)], A([Start or end]), A((Circle)), A(Rounded), A[[Subprocess]], A{{Prepare}}, A>Flag], A[/Input/] and the other slants. <br/> starts a new line in a label. Arrow text can be written A -- yes --> B or A -->|yes| B, and #quot; in a label is a double quote. Subgraphs, style lines and other directions are not supported yet. Unsupported source remains saved.'));};
 $('#import').onclick=()=>{if(!locked)$('#import-file').click();else notice('Reload this tab before importing.',true);};
 $('#import-file').addEventListener('change',async e=>{
   const file=e.target.files[0];e.target.value='';if(!file)return;

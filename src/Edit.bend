@@ -106,7 +106,7 @@ def mark(+id: String, +ns: List<&2, P.Node>, +used: List<&2, String>) -> List<&2
   Bool.pick(List<&2, String>, String.is_empty(label_of(ns, id)) || member(used, id), used, id <> used)
 
 def arrow(+from: String, +label: String, +to: String) -> String:
-  Bool.pick(String, String.is_empty(label), from ++ " --> " ++ to, from ++ " -->|" ++ label ++ "| " ++ to)
+  Bool.pick(String, String.is_empty(label), from ++ " --> " ++ to, from ++ " -->|" ++ G.quote_safe(label) ++ "| " ++ to)
 
 
 def emitted_cons(+s: String, e: Emitted) -> Emitted:
@@ -206,10 +206,10 @@ def remove_edge(+source: String, +from: String, +to: String) -> String:
   text_of(without_edge(lines_of(source), from, to, lines_of(source)))
 
 
-def relabel(ns: List<&2, P.Node>, +id: String, +label: String) -> List<&2, P.Node>:
+def relabel(ns: List<&2, P.Node>, +id: String, +label: String, +shape: U32) -> List<&2, P.Node>:
   match ns:
     case Nil{}: Nil{}
-    case P.Node{+n, old, +shape} <> t: Bool.pick(P.Node, String.eq(n, id), P.Node{n, label, shape}, P.Node{n, old, shape}) <> relabel(t, id, label)
+    case P.Node{+n, old, +s} <> t: Bool.pick(P.Node, String.eq(n, id), P.Node{n, label, shape}, P.Node{n, old, s}) <> relabel(t, id, label, shape)
 
 def labels(ns: List<&2, P.Node>, +id: String) -> Bool:
   match ns:
@@ -217,32 +217,47 @@ def labels(ns: List<&2, P.Node>, +id: String) -> Bool:
     case P.Node{+n, +label, shape} <> t: (String.eq(n, id) && Bool.not(String.eq(n, label))) || labels(t, id)
 
 # A line labels a node when it gives it a label different from its id, or writes it with brackets
-# (`Idea["Idea"]` reads the same as `Idea`, but it is where the label lives; so is `Idea{Idea}`).
+# (`Idea["Idea"]` reads the same as `Idea`, but it is where the label lives; so is any shape, `Idea{Idea}`).
 def labels_node(+line: String, +id: String) -> Bool:
-  Bool.not(is_header(line)) && P.has_node(G.nodes_of(line_graph(line)), id) && (labels(G.nodes_of(line_graph(line)), id) || String.contains(line, id ++ "[") || String.contains(line, id ++ "{"))
+  Bool.not(is_header(line)) && P.has_node(G.nodes_of(line_graph(line)), id) && (labels(G.nodes_of(line_graph(line)), id) || String.contains(line, id ++ "[") || String.contains(line, id ++ "{") || String.contains(line, id ++ "(") || String.contains(line, id ++ ">"))
 
 def any_labels(ls: List<&2, String>, +id: String) -> Bool:
   match ls:
     case Nil{}: False{}
     case +l <> t: labels_node(l, id) || any_labels(t, id)
 
-def relabel_line.go(+indent: String, g: P.Graph, +id: String, +label: String, +all: List<&2, String>, cs: List<&2, P.Class>) -> String:
+def relabel_line.go(+indent: String, g: P.Graph, +id: String, +label: String, +shape: U32, +all: List<&2, String>, cs: List<&2, P.Class>) -> String:
   match g:
-    case P.Graph{ns, +es, error, l}: emit(indent, relabel(ns, id, label), es, all, cs)
+    case P.Graph{ns, +es, error, l}: emit(indent, relabel(ns, id, label, shape), es, all, cs)
 
-def relabel_line(+line: String, +id: String, +label: String, +all: List<&2, String>) -> String:
-  relabel_line.go(indent_of(line), line_graph(line), id, label, all, P.classes(line))
+def relabel_line(+line: String, +id: String, +label: String, +shape: U32, +all: List<&2, String>) -> String:
+  relabel_line.go(indent_of(line), line_graph(line), id, label, shape, all, P.classes(line))
 
-def relabel_lines(ls: List<&2, String>, +id: String, +label: String, +all: List<&2, String>) -> List<&2, String>:
+def relabel_lines(ls: List<&2, String>, +id: String, +label: String, +shape: U32, +all: List<&2, String>) -> List<&2, String>:
   match ls:
     case Nil{}: Nil{}
-    case +l <> t: Bool.pick(String, labels_node(l, id), relabel_line(l, id, label, all), l) <> relabel_lines(t, id, label, all)
+    case +l <> t: Bool.pick(String, labels_node(l, id), relabel_line(l, id, label, shape, all), l) <> relabel_lines(t, id, label, shape, all)
 
-# With no line that labels the node yet, the label is written once at the end.
-def rename(+source: String, +id: String, +label: String) -> String:
+# The lines that label the node are written again with the new label and shape. With no such line yet,
+# the node is written once at the end.
+def rename_as(+source: String, +id: String, +label: String, +shape: U32) -> String:
   Bool.pick(String, any_labels(lines_of(source), id),
-    text_of(relabel_lines(lines_of(source), id, label, lines_of(source))),
-    G.rename_node(source, id, label))
+    text_of(relabel_lines(lines_of(source), id, label, shape, lines_of(source))),
+    G.rename_node_as(source, id, label, shape))
+
+# The node's label as read (its id when it has none).
+def text_of_node(ns: List<&2, P.Node>, +id: String) -> String:
+  match ns:
+    case Nil{}: id
+    case P.Node{+n, +l, s} <> t: Bool.pick(String, String.eq(n, id), l, text_of_node(t, id))
+
+# Renaming keeps the node's shape.
+def rename(+source: String, +id: String, +label: String) -> String:
+  rename_as(source, id, label, shape_of(G.nodes_of(G.parse(source)), id))
+
+# A new shape keeps the node's label.
+def set_shape(+source: String, +id: String, +shape: U32) -> String:
+  rename_as(source, id, text_of_node(G.nodes_of(G.parse(source)), id), shape)
 
 # ---------- Manual layout: `%% borzoi manual` and one `%% borzoi <id> <x> <y>` line per node ----------
 # Mermaid ignores %% lines, so other tools read the same diagram and lay it out on their own.
@@ -367,11 +382,14 @@ def edge_label(es: List<&2, P.Edge>, +from: String, +to: String) -> String:
     case Nil{}: ""
     case P.Edge{+f, +t, +label} <> rest: Bool.pick(String, String.eq(f, from) && String.eq(t, to), label, edge_label(rest, from, to))
 
-def insert_between.go(+source: String, +from: String, +to: String, +label: String, +id: String, +old: String) -> String:
-  remove_edge(G.write_line(G.write_line(source, arrow(from, old, G.node_text(id, label))), id ++ " --> " ++ to), from, to)
+def insert_between.go(+source: String, +from: String, +to: String, +label: String, +shape: U32, +id: String, +old: String) -> String:
+  remove_edge(G.write_line(G.write_line(source, arrow(from, old, G.shaped_text(id, label, shape))), id ++ " --> " ++ to), from, to)
+
+def insert_between_as(+source: String, +from: String, +to: String, +label: String, +shape: U32) -> String:
+  insert_between.go(source, from, to, label, shape, G.readable_id(source, label), edge_label(edges_of(G.parse(source)), from, to))
 
 def insert_between(+source: String, +from: String, +to: String, +label: String) -> String:
-  insert_between.go(source, from, to, label, G.readable_id(source, label), edge_label(edges_of(G.parse(source)), from, to))
+  insert_between_as(source, from, to, label, 0)
 
 # ---------- Color a node: its tone classes go, `id:::tone` is written at the end, with its classDef once ----------
 

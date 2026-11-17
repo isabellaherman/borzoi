@@ -55,22 +55,27 @@ def line_break(+source: String) -> String:
 def write_line(+source: String, line: String) -> String:
   base(source) ++ line_break(base(source)) ++ "  " ++ line
 
-# A label in double quotes, so any text is a valid label; a double quote inside is written #quot;, as Mermaid does.
-def quote_safe.at(quote: Bool, +c: U32) -> String:
-  match quote:
-    case True{}: "#quot;"
-    case False{}: SCon{Chr{c}, SNil{}}
+# A label in double quotes, so any text is a valid label: a double quote inside is written #quot; and a new line
+# <br/>, as Mermaid does.
+def quote_safe.at(+c: U32) -> String:
+  match c:
+    case 34: "#quot;"
+    case 10: "<br/>"
+    case _: SCon{Chr{c}, SNil{}}
 
 def quote_safe(s: String) -> String:
   match s:
     case SNil{}: SNil{}
-    case SCon{Chr{+c}, t}: quote_safe.at(U32.is_eq(c, 34), c) ++ quote_safe(t)
+    case SCon{Chr{+c}, t}: quote_safe.at(c) ++ quote_safe(t)
 
-# A node written with its shape: A["text"] for a box (0), A{"text"} for a decision (1).
-def shaped_text(id: String, label: String, shape: U32) -> String:
-  match shape:
-    case 0: id ++ "[\"" ++ quote_safe(String.trim(label)) ++ "\"]"
-    case _: id ++ "{\"" ++ quote_safe(String.trim(label)) ++ "\"}"
+# A node written with its shape, its label in quotes: A["text"] for the box, A{"text"} for a decision, A[("text")]
+# for a database, and so on (Parser.bend: shape_open, shape_close).
+def shaped_text(id: String, label: String, +shape: U32) -> String:
+  id ++ P.shape_open(shape) ++ "\"" ++ quote_safe(String.trim(label)) ++ "\"" ++ P.shape_close(shape)
+
+# The name Bend-UI draws a shape by (Mermaid's own); "" for the box.
+def shape_name(s: U32) -> String:
+  P.shape_name(s)
 
 def node_text(id: String, label: String) -> String:
   shaped_text(id, label, 0)
@@ -172,15 +177,32 @@ def readable_id(+source: String, +label: String) -> String:
 def connect(+source: String, from: String, to: String) -> String:
   write_line(source, from ++ " --> " ++ to)
 
+# A new node takes a shape (0 is the box; Parser.bend: shape_open).
+def add_node_as(+source: String, +label: String, +shape: U32) -> String:
+  write_line(source, shaped_text(readable_id(source, label), label, shape))
+
 def add_node(+source: String, +label: String) -> String:
-  write_line(source, node_text(readable_id(source, label), label))
+  add_node_as(source, label, 0)
+
+def add_node_below_as(+source: String, from: String, +label: String, +shape: U32) -> String:
+  write_line(source, from ++ " --> " ++ shaped_text(readable_id(source, label), label, shape))
 
 def add_node_below(+source: String, from: String, +label: String) -> String:
-  write_line(source, from ++ " --> " ++ node_text(readable_id(source, label), label))
+  add_node_below_as(source, from, label, 0)
 
-# Mermaid keeps a node's last label, so renaming is the node written again with its new label.
+# Mermaid keeps a node's last label, so renaming is the node written again with its new label and shape.
+def rename_node_as(+source: String, id: String, label: String, +shape: U32) -> String:
+  write_line(source, shaped_text(id, label, shape))
+
 def rename_node(+source: String, id: String, label: String) -> String:
-  write_line(source, node_text(id, label))
+  rename_node_as(source, id, label, 0)
+
+# A shape's Mermaid opening and closing, for the shape menu: "[(" and ")]" for the database.
+def shape_open(s: U32) -> String:
+  P.shape_open(s)
+
+def shape_close(s: U32) -> String:
+  P.shape_close(s)
 
 def has_edge(es: List<&2, P.Edge>, +from: String, +to: String) -> Bool:
   match es:

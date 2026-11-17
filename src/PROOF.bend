@@ -49,6 +49,15 @@ def L.return_loop_is_allowed(): {==}
 def L.return_loop_parses(): {==}
 def L.self_arrow_parses(): {==}
 def L.slanted_shape_is_its_text(): {==}
+def L.all_shapes_are_read(): {==}
+def L.shapes_round_trip(): {==}
+def L.line_breaks_are_read(): {==}
+def L.line_breaks_are_written(): {==}
+def L.add_with_a_shape(): {==}
+def L.insert_with_a_shape(): {==}
+def L.set_shape_keeps_the_label(): {==}
+def L.set_shape_of_a_bare_node(): {==}
+def L.rename_keeps_the_shape(): {==}
 def L.repeated_arrow_is_refused(): {==}
 def L.self_arrow_is_allowed(): {==}
 def L.repeated_self_arrow_is_refused(): {==}

@@ -5,7 +5,7 @@ type Token is Data:
   Token{kind: U32, text: String, line: Nat}
 type Lexed is Data:
   Lexed{tokens: List<&2, Token>, error: String, line: Nat}
-# shape 0 is a box, A[text]; shape 1 is a decision, A{text}.
+# shape is one of Mermaid's 14 flowchart shapes (shape_name): 0 is the box, A[text]; 1 the decision, A{text}.
 type Node is Data:
   Node{id: String, label: String, shape: U32}
 type Edge is Data:
@@ -35,8 +35,10 @@ def free_step(code: U32, word: String, acc: List<&2, Token>, +line: Nat) -> Lexe
   match code:
     case 45: Lexer{6, "", push_word(word, line, acc), line, ""}
     case 37: Lexer{8, "", push_word(word, line, acc), line, ""}
-    case 91: Lexer{1, "", push_word(word, line, acc), line, ""}
-    case 123: Lexer{12, "", push_word(word, line, acc), line, ""}
+    case 91: Lexer{16, "", push_word(word, line, acc), line, ""}
+    case 40: Lexer{17, "", push_word(word, line, acc), line, ""}
+    case 123: Lexer{19, "", push_word(word, line, acc), line, ""}
+    case 62: Lexer{108, "", push_word(word, line, acc), line, ""}
     case 124: Lexer{3, "", push_word(word, line, acc), line, ""}
     case 58: Lexer{9, "", push_word(word, line, acc), line, ""}
     case 10: Lexer{0, "", Token{4, "", line} <> push_word(word, line, acc), 1n+line, ""}
@@ -49,68 +51,159 @@ def free_step(code: U32, word: String, acc: List<&2, Token>, +line: Nat) -> Lexe
         Lexer{0, SCon{Chr{c}, word}, acc, line, ""},
         lexer_error(line, "Unsupported syntax. Use node IDs, [labels], --> and |edge labels|."))
 
-# A label is read the same way in a box, A[text] (shape 0), and in a decision, A{text} (shape 1).
-def close_of(s: U32) -> U32:
-  match s:
-    case 0: 93
-    case _: 125
+# ---------- Node shapes: Mermaid's 14 flowchart shapes ----------
+# A shape is the text between an opening and its closing: A[text] is 0, A{text} is 1, and so on (shape_open,
+# shape_close). The label is read as plain text up to the closing, or in double quotes. The lexer's mode says
+# where it is: 16-19 just after [ ( (( {, deciding the shape; 100+s plain text of shape s; 200+s quoted text;
+# 300+4s+k after the quotes, with k characters of the closing read. A label becomes a Token{100+s}.
 
-def open_of(s: U32) -> U32:
+def shape_open(s: U32) -> String:
   match s:
-    case 0: 91
-    case _: 123
+    case 0: "["
+    case 1: "{"
+    case 2: "("
+    case 3: "(["
+    case 4: "[["
+    case 5: "[("
+    case 6: "(("
+    case 7: "((("
+    case 8: ">"
+    case 9: "{{"
+    case 10: "[/"
+    case 11: "[\\"
+    case 12: "[/"
+    case 13: "[\\"
+    case _: "["
 
-def plain_mode(s: U32) -> U32:
+def shape_close(s: U32) -> String:
   match s:
-    case 0: 1
-    case _: 12
+    case 0: "]"
+    case 1: "}"
+    case 2: ")"
+    case 3: "])"
+    case 4: "]]"
+    case 5: ")]"
+    case 6: "))"
+    case 7: ")))"
+    case 8: "]"
+    case 9: "}}"
+    case 10: "/]"
+    case 11: "\\]"
+    case 12: "\\]"
+    case 13: "/]"
+    case _: "]"
 
-def quoted_mode(s: U32) -> U32:
+# Mermaid's name for each shape, the name Bend-UI draws it by. The box is "": drawn as the box it always was.
+def shape_name(s: U32) -> String:
   match s:
-    case 0: 2
-    case _: 13
+    case 0: ""
+    case 1: "diam"
+    case 2: "rounded"
+    case 3: "stadium"
+    case 4: "fr-rect"
+    case 5: "cyl"
+    case 6: "circle"
+    case 7: "dbl-circ"
+    case 8: "odd"
+    case 9: "hex"
+    case 10: "lean-r"
+    case 11: "lean-l"
+    case 12: "trap-b"
+    case 13: "trap-t"
+    case _: ""
 
-def after_mode(s: U32) -> U32:
+# [/ opens lean-r ([/text/]) and trap-b ([/text\]); [\ opens lean-l ([\text\]) and trap-t ([\text/]).
+# Which one it is shows only in the closing: each is the other's twin.
+def twin(s: U32) -> U32:
   match s:
-    case 0: 4
-    case _: 14
+    case 10: 12
+    case 12: 10
+    case 11: 13
+    case 13: 11
+    case _: s
 
-def label_kind(s: U32) -> U32:
+def first_code(s: String) -> U32:
   match s:
-    case 0: 1
-    case _: 7
+    case SNil{}: 0
+    case SCon{Chr{c}, t}: c
 
-def nested_message(s: U32) -> String:
-  match s:
-    case 0: "Put a label containing brackets inside double quotes."
-    case _: "Put a label containing braces inside double quotes."
+def char_at(s: String, k: U32) -> U32:
+  match k:
+    case 0: first_code(s)
+    case 1: first_code(String.drop(s, 1n))
+    case 2: first_code(String.drop(s, 2n))
+    case _: 0
 
-def close_message(s: U32) -> String:
-  match s:
-    case 0: "Expected ] after a quoted label."
-    case _: "Expected } after a quoted label."
+def cons(c: U32, s: String) -> String:
+  SCon{Chr{c}, s}
 
-def plain_label_step(code: U32, +word: String, +acc: List<&2, Token>, +line: Nat, +s: U32) -> Lexer:
+def label_token(+s: U32, text: String, acc: List<&2, Token>, +line: Nat) -> Lexer:
+  Lexer{0, "", Token{U32.add(100, s), text, line} <> acc, line, ""}
+
+# Plain text: it ends where the text read so far ends with the closing (the twin's closing counts too).
+def plain_step(+s: U32, code: U32, +word: String, +acc: List<&2, Token>, +line: Nat) -> Lexer:
   match code:
     case 34:
-      Bool.pick(Lexer, String.is_empty(String.trim(word)), Lexer{quoted_mode(s), "", acc, line, ""}, lexer_error(line, "Put quotes around the whole label."))
+      Bool.pick(Lexer, String.is_empty(String.trim(word)), Lexer{U32.add(200, s), "", acc, line, ""}, lexer_error(line, "Put quotes around the whole label."))
     case 10: lexer_error(line, "Keep each label on one line.")
     case +c:
-      Bool.pick(Lexer, U32.is_eq(c, close_of(s)), Lexer{0, "", Token{label_kind(s), String.trim(String.reverse(word)), line} <> acc, line, ""},
-        Bool.pick(Lexer, U32.is_eq(c, open_of(s)), lexer_error(line, nested_message(s)), Lexer{plain_mode(s), SCon{Chr{c}, word}, acc, line, ""}))
+      +read = cons(c, word)
+      +own = String.starts_with(read, String.reverse(shape_close(s)))
+      +other = U32.is_ne(twin(s), s) && String.starts_with(read, String.reverse(shape_close(twin(s))))
+      Bool.pick(Lexer, own, label_token(s, String.trim(String.reverse(String.drop(read, String.length(shape_close(s))))), acc, line),
+        Bool.pick(Lexer, other, label_token(twin(s), String.trim(String.reverse(String.drop(read, String.length(shape_close(twin(s)))))), acc, line),
+          Bool.pick(Lexer, U32.is_eq(c, first_code(shape_open(s))), lexer_error(line, "Put a label containing brackets inside double quotes."),
+            Lexer{U32.add(100, s), read, acc, line, ""})))
 
-def quoted_step(code: U32, word: String, acc: List<&2, Token>, line: Nat, +s: U32) -> Lexer:
+def quoted_step(+s: U32, code: U32, word: String, acc: List<&2, Token>, line: Nat) -> Lexer:
   match code:
-    case 34: Lexer{after_mode(s), word, acc, line, ""}
+    case 34: Lexer{U32.add(300, U32.mul(s, 4)), word, acc, line, ""}
     case 10: lexer_error(line, "Keep each label on one line.")
-    case c: Lexer{quoted_mode(s), SCon{Chr{c}, word}, acc, line, ""}
+    case c: Lexer{U32.add(200, s), SCon{Chr{c}, word}, acc, line, ""}
 
-def after_quote_step(code: U32, +word: String, +acc: List<&2, Token>, +line: Nat, +s: U32) -> Lexer:
+# After the closing quote: spaces, then the closing, one character at a time.
+def after_next(+s: U32, +k: U32, +word: String, +acc: List<&2, Token>, +line: Nat) -> Lexer:
+  Bool.pick(Lexer, Nat.is_eq(U32.to_nat(U32.add(k, 1)), String.length(shape_close(s))),
+    label_token(s, String.reverse(word), acc, line),
+    Lexer{U32.add(301, U32.add(U32.mul(s, 4), k)), word, acc, line, ""})
+
+def after_step(+s: U32, +k: U32, +code: U32, +word: String, +acc: List<&2, Token>, +line: Nat) -> Lexer:
+  Bool.pick(Lexer, U32.is_zero(k) && (U32.is_eq(code, 32) || U32.is_eq(code, 9)), Lexer{U32.add(300, U32.mul(s, 4)), word, acc, line, ""},
+    Bool.pick(Lexer, U32.is_eq(code, char_at(shape_close(s), k)), after_next(s, k, word, acc, line),
+      Bool.pick(Lexer, U32.is_ne(twin(s), s) && U32.is_eq(code, char_at(shape_close(twin(s)), k)), after_next(twin(s), k, word, acc, line),
+        lexer_error(line, "Expected " ++ shape_close(s) ++ " after a quoted label."))))
+
+def shaped_step(after: Bool, quoted: Bool, plain: Bool, +m: U32, +code: U32, +word: String, +acc: List<&2, Token>, +line: Nat) -> Lexer:
+  match after quoted plain:
+    case True{} _ _: after_step(U32.div(U32.sub(m, 300), 4), U32.mod(U32.sub(m, 300), 4), code, word, acc, line)
+    case False{} True{} _: quoted_step(U32.sub(m, 200), code, word, acc, line)
+    case False{} False{} True{}: plain_step(U32.sub(m, 100), code, word, acc, line)
+    case False{} False{} False{}: lexer_error(line, "Unknown lexer state.")
+
+# Just after an opening: the next character says which shape it is, or is the label's first character.
+def open_square(code: U32, +acc: List<&2, Token>, +line: Nat) -> Lexer:
   match code:
-    case 32: Lexer{after_mode(s), word, acc, line, ""}
-    case 9: Lexer{after_mode(s), word, acc, line, ""}
-    case +c:
-      Bool.pick(Lexer, U32.is_eq(c, close_of(s)), Lexer{0, "", Token{label_kind(s), String.reverse(word), line} <> acc, line, ""}, lexer_error(line, close_message(s)))
+    case 91: Lexer{104, "", acc, line, ""}
+    case 40: Lexer{105, "", acc, line, ""}
+    case 47: Lexer{110, "", acc, line, ""}
+    case 92: Lexer{111, "", acc, line, ""}
+    case c: plain_step(0, c, "", acc, line)
+
+def open_round(code: U32, +acc: List<&2, Token>, +line: Nat) -> Lexer:
+  match code:
+    case 40: Lexer{18, "", acc, line, ""}
+    case 91: Lexer{103, "", acc, line, ""}
+    case c: plain_step(2, c, "", acc, line)
+
+def open_circle(code: U32, +acc: List<&2, Token>, +line: Nat) -> Lexer:
+  match code:
+    case 40: Lexer{107, "", acc, line, ""}
+    case c: plain_step(6, c, "", acc, line)
+
+def open_curly(code: U32, +acc: List<&2, Token>, +line: Nat) -> Lexer:
+  match code:
+    case 123: Lexer{109, "", acc, line, ""}
+    case c: plain_step(1, c, "", acc, line)
 
 def edge_label_step(code: U32, word: String, acc: List<&2, Token>, +line: Nat) -> Lexer:
   match code:
@@ -165,10 +258,7 @@ def arrow_step(code: U32, acc: List<&2, Token>, +line: Nat) -> Lexer:
 def step(mode: U32, +code: U32, word: String, +acc: List<&2, Token>, +line: Nat) -> Lexer:
   match mode:
     case 0: free_step(code, word, acc, line)
-    case 1: plain_label_step(code, word, acc, line, 0)
-    case 2: quoted_step(code, word, acc, line, 0)
     case 3: edge_label_step(code, word, acc, line)
-    case 4: after_quote_step(code, word, acc, line, 0)
     case 5:
       Bool.pick(Lexer, U32.is_eq(code, 10), Lexer{0, "", Token{4, "", line} <> acc, 1n+line, ""}, Lexer{5, "", acc, line, ""})
     case 6:
@@ -181,11 +271,12 @@ def step(mode: U32, +code: U32, word: String, +acc: List<&2, Token>, +line: Nat)
     case 10:
       Bool.pick(Lexer, U32.is_eq(code, 58), Lexer{11, "", acc, line, ""}, lexer_error(line, "Use ::: before a class name."))
     case 11: class_step(code, word, acc, line)
-    case 12: plain_label_step(code, word, acc, line, 1)
-    case 13: quoted_step(code, word, acc, line, 1)
-    case 14: after_quote_step(code, word, acc, line, 1)
     case 15: arrow_text_step(code, word, acc, line)
-    case _: lexer_error(line, "Unknown lexer state.")
+    case 16: open_square(code, acc, line)
+    case 17: open_round(code, acc, line)
+    case 18: open_circle(code, acc, line)
+    case 19: open_curly(code, acc, line)
+    case +m: shaped_step(U32.is_ge(m, 300), U32.is_ge(m, 200), U32.is_ge(m, 100), m, code, word, acc, line)
 
 def scan(s: String, state: Lexer) -> Lexer:
   match s state:
@@ -225,26 +316,11 @@ def insert_node(xs: List<&2, Node>, id: String, label: String, exists: Bool, exp
     case True{} False{}: xs
     case False{} _: Node{id, label, shape} <> xs
 
-# Slanted shapes ([/text/], [\text\], [/text\], [\text/]) are read as their text; the node is drawn as a box.
-def is_slant(+c: U32) -> Bool:
-  U32.is_eq(c, 47) || U32.is_eq(c, 92)
-
-def last_is_slant(s: String) -> Bool:
-  match s:
-    case SNil{}: False{}
-    case SCon{Chr{+c}, SNil{}}: is_slant(c)
-    case SCon{h, SCon{a, b}}: last_is_slant(SCon{a, b})
-
 def drop_last(s: String) -> String:
   match s:
     case SNil{}: SNil{}
     case SCon{h, SNil{}}: SNil{}
     case SCon{h, SCon{a, b}}: SCon{h, drop_last(SCon{a, b})}
-
-def shape_text(s: String) -> String:
-  match s:
-    case SNil{}: SNil{}
-    case SCon{Chr{+c}, +t}: Bool.pick(String, is_slant(c) && last_is_slant(t), String.trim(drop_last(t)), SCon{Chr{c}, t})
 
 def add_node(+xs: List<&2, Node>, +id: String, label: String, explicit: Bool, shape: U32) -> List<&2, Node>:
   insert_node(xs, id, label, has_node(xs, id), explicit, shape)
@@ -303,8 +379,32 @@ def decode.go(n: Nat, s: String) -> String:
     case _ SNil{}: SNil{}
     case 1n+m SCon{Chr{+c}, +t}: decode.piece(c, entity(t)) ++ decode.go(m, decode.next(c, t, entity(t)))
 
-def decode(+s: String) -> String:
+# Mermaid's line break in a label, <br>, <br/> or <br />, is a new line ("\n").
+def br_len(+t: String) -> Nat:
+  Bool.pick(Nat, String.starts_with(t, "br>") || String.starts_with(t, "BR>"), 3n,
+    Bool.pick(Nat, String.starts_with(t, "br/>") || String.starts_with(t, "BR/>"), 4n,
+      Bool.pick(Nat, String.starts_with(t, "br />") || String.starts_with(t, "BR />"), 5n, 0n)))
+
+def breaks.piece(+c: U32, +t: String) -> String:
+  Bool.pick(String, U32.is_eq(c, 60) && Nat.is_gt(br_len(t), 0n), "\n", cons(c, ""))
+
+def breaks.next(+c: U32, +t: String) -> String:
+  Bool.pick(String, U32.is_eq(c, 60) && Nat.is_gt(br_len(t), 0n), String.drop(t, br_len(t)), t)
+
+def breaks.go(n: Nat, s: String) -> String:
+  match n s:
+    case 0n _: s
+    case _ SNil{}: SNil{}
+    case 1n+m SCon{Chr{+c}, +t}: breaks.piece(c, t) ++ breaks.go(m, breaks.next(c, t))
+
+def breaks(+s: String) -> String:
+  breaks.go(String.length(s), s)
+
+def decode.text(+s: String) -> String:
   decode.go(String.length(s), s)
+
+def decode(+s: String) -> String:
+  decode.text(breaks(s))
 
 # An arrow label in double quotes, `-->|"text"|` or `-- "text" -->`, is read without them.
 def drop_first(s: String) -> String:
@@ -337,10 +437,6 @@ def parse_tokens(ts: List<&2, Token>, phase: U32, +previous: String, edge_label:
     case Token{4, w, l} <> t 4: parse_tokens(t, 0, "", "", nodes, edges)
     case Token{0, +id, l} <> t 0:
       parse_tokens(t, 1, id, "", add_node(nodes, id, id, False{}, 0), edges)
-    case Token{1, label, l} <> t 1:
-      parse_tokens(t, 4, previous, "", add_node(nodes, previous, decode(shape_text(label)), True{}, 0), edges)
-    case Token{7, label, l} <> t 1:
-      parse_tokens(t, 4, previous, "", add_node(nodes, previous, decode(label), True{}, 1), edges)
     case Token{6, w, l} <> t 1: parse_tokens(t, 1, previous, "", nodes, edges)
     case Token{6, w, l} <> t 4: parse_tokens(t, 4, previous, "", nodes, edges)
     case Token{2, w, l} <> t 1: parse_tokens(t, 2, previous, "", nodes, edges)
@@ -348,6 +444,11 @@ def parse_tokens(ts: List<&2, Token>, phase: U32, +previous: String, edge_label:
     case Token{3, label, l} <> t 2: parse_tokens(t, 3, previous, decode(unquote(label)), nodes, edges)
     case Token{0, +id, l} <> t 2:
       parse_tokens(t, 1, id, "", add_node(nodes, id, id, False{}, 0), Edge{previous, id, ""} <> edges)
+    case Token{0, w, l} <> t 1: Graph{Nil{}, Nil{}, "Expected a node, --> connection, or a new line. See the syntax guide.", l}
+    case Token{3, w, l} <> t 1: Graph{Nil{}, Nil{}, "Expected a node, --> connection, or a new line. See the syntax guide.", l}
+    case Token{5, w, l} <> t 1: Graph{Nil{}, Nil{}, "Expected a node, --> connection, or a new line. See the syntax guide.", l}
+    case Token{+k, label, l} <> t 1:
+      parse_tokens(t, 4, previous, "", add_node(nodes, previous, decode(label), True{}, U32.sub(k, 100)), edges)
     case Token{0, +id, l} <> t 3:
       parse_tokens(t, 1, id, "", add_node(nodes, id, id, False{}, 0), Edge{previous, id, edge_label} <> edges)
     case Token{k, w, l} <> t p:

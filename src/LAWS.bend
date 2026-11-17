@@ -140,9 +140,48 @@ law return_loop_parses:
   {G.parse("flowchart TD\nA --> B\nB --> A") ==
    P.Graph{[P.Node{"A", "A", 0}, P.Node{"B", "B", 0}], [P.Edge{"A", "B", ""}, P.Edge{"B", "A", ""}], "", 0n} : P.Graph}
 
-# REGRESSION: a slanted shape is read as its text.
+# REGRESSION: a slanted shape is read as its text and its shape (Data input/output).
 law slanted_shape_is_its_text:
-  {G.parse("flowchart TD\nF[/points login/]") == P.Graph{[P.Node{"F", "points login", 0}], [], "", 0n} : P.Graph}
+  {G.parse("flowchart TD\nF[/points login/]") == P.Graph{[P.Node{"F", "points login", 10}], [], "", 0n} : P.Graph}
+
+# REGRESSION: Mermaid's 14 flowchart shapes are read, each with its text, plain or quoted.
+law all_shapes_are_read:
+  {G.parse("flowchart TD\nA[a] --> B{b} --> C(c) --> D([d]) --> E[[e]] --> F[(f)] --> G((g))\nH(((h))) --> I>i] --> J{{j}} --> K[/k/] --> L[\\l\\] --> M[/m\\] --> N[\\n/]\nO[(\"o) db\")]") ==
+   P.Graph{[P.Node{"A", "a", 0}, P.Node{"B", "b", 1}, P.Node{"C", "c", 2}, P.Node{"D", "d", 3}, P.Node{"E", "e", 4}, P.Node{"F", "f", 5}, P.Node{"G", "g", 6},
+            P.Node{"H", "h", 7}, P.Node{"I", "i", 8}, P.Node{"J", "j", 9}, P.Node{"K", "k", 10}, P.Node{"L", "l", 11}, P.Node{"M", "m", 12}, P.Node{"N", "n", 13}, P.Node{"O", "o) db", 5}],
+           [P.Edge{"A", "B", ""}, P.Edge{"B", "C", ""}, P.Edge{"C", "D", ""}, P.Edge{"D", "E", ""}, P.Edge{"E", "F", ""}, P.Edge{"F", "G", ""},
+            P.Edge{"H", "I", ""}, P.Edge{"I", "J", ""}, P.Edge{"J", "K", ""}, P.Edge{"K", "L", ""}, P.Edge{"L", "M", ""}, P.Edge{"M", "N", ""}], "", 0n} : P.Graph}
+
+# REGRESSION: every shape Borzoi writes reads back as the same shape and text.
+law shapes_round_trip:
+  {G.parse("flowchart TD\n" ++ G.shaped_text("A", "a", 3) ++ "\n" ++ G.shaped_text("B", "b", 7) ++ "\n" ++ G.shaped_text("C", "c", 8) ++ "\n" ++ G.shaped_text("D", "d", 11) ++ "\n" ++ G.shaped_text("E", "e", 13) ++ "\n" ++ G.shaped_text("F", "f", 5)) ==
+   P.Graph{[P.Node{"A", "a", 3}, P.Node{"B", "b", 7}, P.Node{"C", "c", 8}, P.Node{"D", "d", 11}, P.Node{"E", "e", 13}, P.Node{"F", "f", 5}], [], "", 0n} : P.Graph}
+
+# REGRESSION: <br/> in a label is a new line, and a new line is written back as <br/>.
+law line_breaks_are_read:
+  {G.parse("flowchart TD\nA[\"one<br/>two<br>three\"]") == P.Graph{[P.Node{"A", "one\ntwo\nthree", 0}], [], "", 0n} : P.Graph}
+
+law line_breaks_are_written:
+  {G.add_node("flowchart TD", "one\ntwo") == "flowchart TD\n  one_two[\"one<br/>two\"]" : String}
+
+# REGRESSION: a node can be added with a shape, below a node or between two.
+law add_with_a_shape:
+  {G.add_node_below_as("flowchart TD\n  A", "A", "Paid?", 1) == "flowchart TD\n  A\n  A --> Paid{\"Paid?\"}" : String}
+
+law insert_with_a_shape:
+  {E.insert_between_as("flowchart TD\n  A --> B", "A", "B", "Orders", 5) == "flowchart TD\n  A --> Orders[(\"Orders\")]\n  Orders --> B" : String}
+
+# REGRESSION: a new shape rewrites only the line that labels the node, and keeps its label.
+law set_shape_keeps_the_label:
+  {E.set_shape("flowchart TD\n  %% note\n  A[Orders] --> B\n  C", "A", 5) == "flowchart TD\n  %% note\n  A[(\"Orders\")] --> B\n  C" : String}
+
+# REGRESSION: a node written only by its id gets its shape on a line of its own.
+law set_shape_of_a_bare_node:
+  {E.set_shape("flowchart TD\n  A --> B", "B", 1) == "flowchart TD\n  A --> B\n  B{\"B\"}" : String}
+
+# REGRESSION: renaming a database keeps it a database.
+law rename_keeps_the_shape:
+  {E.rename("flowchart TD\n  A[(Orders)] --> B", "A", "Sales") == "flowchart TD\n  A[(\"Sales\")] --> B" : String}
 
 # REGRESSION: an arrow from a node to itself is valid, as in Mermaid, and keeps its arrow.
 law self_arrow_parses:
