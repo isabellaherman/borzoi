@@ -1,6 +1,7 @@
 // The app's shared state and the one way to change it: change() saves through the storage adapter and,
 // on navigation, draws again. Workspace mutations themselves live in Workspace.bend.
-import { createFeedback, createDialog, configureSourceEditor, createSidebar, setStatusTone } from '../../vendor/bend-ui/workspace.js';
+import { createFeedback, createDialog, configureSourceEditor, setStatusTone } from '../../vendor/bend-ui/workspace.js';
+import { setSide, isNarrow, tokens as T } from '../../vendor/bend-ui/ui.js';
 import D from '../workspace/Workspace.bend';
 import { array, encode } from '../workspace/codec.js';
 import { StorageConflict } from '../workspace/storage.js';
@@ -9,7 +10,12 @@ export const $=s=>document.querySelector(s);
 export const ui={source:$('#source'),diagram:$('#diagram'),notice:$('#notice'),status:$('#save-status'),modal:$('#modal')};
 export const feedback=createFeedback(ui.notice);
 export const modal=createDialog(ui.modal,{title:$('#modal-title'),body:$('#modal-content'),close:$('#close-modal')});
-export const sidebar=createSidebar($('#sidebar'),$('#menu'));
+// The side bar is the lib's own (ui.js): beside the page on a wide screen, a drawer on a narrow one. #menu opens and
+// closes it (data-side-toggle); a click outside the drawer or Escape closes it. Only one thing may toggle it: with
+// workspace.js's createSidebar as well, the lib's click-outside closed the drawer in the same click that opened it.
+const fitSide=()=>setSide($('#sidebar'),!isNarrow());
+fitSide();matchMedia(`(max-width: ${T.breakpoint()-1}px)`).addEventListener('change',fitSide);
+export const sidebar={closeOnNarrow(){if(isNarrow())setSide($('#sidebar'),false);}};
 configureSourceEditor(ui.source);
 
 export const S={workspace:D.initial(),store:null,revision:0,saves:Promise.resolve(),pending:0,dirty:false,locked:false,saveError:false,
