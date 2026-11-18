@@ -61,7 +61,7 @@ describe('workspace invariants',()=>{
   });
   test('malformed backups fail before reaching the domain',()=>{
     expect(()=>parseBackup('{oops')).toThrow();
-    const a=encode(seeded());a.version=2;expect(()=>decode(a)).toThrow();
+    const a=encode(seeded());a.version=3;expect(()=>decode(a)).toThrow();
     const b=encode(seeded());b.workspace.projects[0].diagrams[0].id=1;expect(()=>decode(b)).toThrow('duplicate');
     const c=encode(seeded());c.workspace.nextId=1;expect(()=>decode(c)).toThrow('counter');
     const d=encode(seeded());d.workspace.documentId=999;expect(()=>decode(d)).toThrow('missing');

@@ -8,6 +8,8 @@ import { renderNavigation, initSidebar } from './sidebar.js';
 import { renderGraph, renderMode, initDiagramView } from './diagram-view.js';
 import { checkInboxes } from './agent.js';
 import { initBackup } from './backup.js';
+import { renderWhy, initWhy } from './why.js';
+import { renderDocument, initDocumentView, checkpointDocument, flushDocument } from './document-view.js';
 
 $('#app-version').textContent=`Borzoi · ${metadata.version}`;
 function render(){
@@ -15,14 +17,16 @@ function render(){
   renderNavigation();$('#project-name').textContent=p?.name??'';$('#project-separator').hidden=!p;
   $('#diagram-crumb').textContent=title;ui.source.value=d?.source??'';ui.source.disabled=S.locked;$('#editor-panel').hidden=S.workspace.mode===0;
   for(const id of ['export','checkpoint']){$('#'+id).hidden=!d;$('#'+id).disabled=S.locked;}$('#actions-separator').hidden=!d;
-  renderMode();renderGraph();document.title='Borzoi — Diagrams';
+  renderMode();renderGraph();renderWhy();renderDocument();document.title='Borzoi — Diagrams';
 }
 hooks.render=render;
 initSidebar();
 initDiagramView();
+initWhy();
+initDocumentView();
 initBackup();
-document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='s'){e.preventDefault();notice(checkpoint()?'Version saved to history.':'Write source before saving a version.');}});
-window.addEventListener('beforeunload',e=>{if(S.dirty||S.pending){e.preventDefault();e.returnValue='';}});
+document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='s'){e.preventDefault();if(S.docId!==null)notice(checkpointDocument()?'Version saved to history.':'Write in the document before saving a version.');else notice(checkpoint()?'Version saved to history.':'Write source before saving a version.');}});
+window.addEventListener('beforeunload',e=>{flushDocument();if(S.dirty||S.pending){e.preventDefault();e.returnValue='';}});
 
 async function start(){
   $('#app').inert=true;

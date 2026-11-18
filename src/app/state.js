@@ -13,9 +13,13 @@ export const sidebar=createSidebar($('#sidebar'),$('#menu'));
 configureSourceEditor(ui.source);
 
 export const S={workspace:D.initial(),store:null,revision:0,saves:Promise.resolve(),pending:0,dirty:false,locked:false,saveError:false,
-  mounted:null,lastGood:null,previewTimer:null,recoveryPayload:null,checking:false};
-// main.js sets render; change() calls it after a navigation.
-export const hooks={render:()=>{}};
+  mounted:null,lastGood:null,previewTimer:null,recoveryPayload:null,checking:false,
+  // The document on screen, if any (its project and its id), and the document to go back to from a diagram.
+  // What is open in the saved workspace is always a diagram; this is only what this tab shows.
+  docProject:0,docId:null,backTo:null};
+// main.js sets render; change() calls it after a navigation. document-view.js sets leave: it saves the
+// document on screen before something else opens.
+export const hooks={render:()=>{},leave:()=>{}};
 export const graphCache=new Map();
 export const graphKey=()=>`${S.workspace.project}:${S.workspace.diagram}`;
 export const stamp=()=>new Date().toISOString();
@@ -39,4 +43,7 @@ export function change(next,{navigation=false}={}){
   S.workspace=next;persist();if(navigation){S.lastGood=graphCache.get(graphKey())??null;hooks.render();}
 }
 export function checkpoint(){const d=doc();if(!d||(!d.source&&!array(d.history).length)||S.locked)return false;change(D.update(S.workspace,{$:'Checkpoint',stamp:stamp()}));return true;}
-export function switchTo(pid,did){checkpoint();change(D.open(S.workspace,pid,did),{navigation:true});sidebar.closeOnNarrow();}
+// Leave the document on screen (saved first): the diagram that is open shows again.
+export function leaveDocument(){hooks.leave();S.docId=null;S.backTo=null;}
+// Open a diagram. `from` is the document it was opened from (Edit diagram), to offer the way back.
+export function switchTo(pid,did,from=null){leaveDocument();S.backTo=from;checkpoint();change(D.open(S.workspace,pid,did),{navigation:true});sidebar.closeOnNarrow();}

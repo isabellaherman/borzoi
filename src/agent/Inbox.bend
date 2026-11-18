@@ -9,7 +9,7 @@ import ../workspace/Workspace.bend as W
 def create_agent_project(w: W.Workspace, name: String, key: String) -> W.Workspace:
   match w:
     case W.Workspace{ps, +next, p, d, mode}:
-      W.Workspace{W.Project{next, name, Nil{}, key, ""} <> ps, 1n+next, p, d, mode}
+      W.Workspace{W.Project{next, name, Nil{}, key, "", Nil{}} <> ps, 1n+next, p, d, mode}
 
 # A received diagram says who sent it in a Mermaid comment, `%% borzoi from <name>`; other tools ignore it.
 def from_prefix() -> String:
@@ -37,25 +37,25 @@ def received_name(+title: String) -> String:
   Bool.pick(String, String.is_empty(String.trim(title)), "Agent diagram", String.take(String.trim(title), 60n))
 
 def received(id: Nat, title: String, text: String) -> W.Diagram:
-  W.Diagram{id, received_name(title), String.take(marked(text), 9000n), Nil{}}
+  W.Diagram{id, received_name(title), String.take(marked(text), 9000n), Nil{}, Nil{}}
 
 # Only the chosen project, only when the key matches and the message is new.
 def can_receive(ps: List<&2, W.Project>, +project: Nat, +key: String, +id: String) -> Bool:
   match ps:
     case Nil{}: False{}
-    case W.Project{i, n, ds, k, sn} <> t:
+    case W.Project{i, n, ds, k, sn, dcs} <> t:
       (Nat.is_eq(i, project) && String.eq(k, key) && Bool.not(String.eq(sn, id)) && Bool.not(String.is_empty(key))) || can_receive(t, project, key, id)
 
 def deliver(p: W.Project, doc: W.Diagram, id: String, selected: Bool) -> W.Project:
   match p selected:
-    case W.Project{i, n, ds, k, sn} False{}: W.Project{i, n, ds, k, sn}
-    case W.Project{i, n, ds, k, sn} True{}: W.Project{i, n, doc <> ds, k, id}
+    case W.Project{i, n, ds, k, sn, dcs} False{}: W.Project{i, n, ds, k, sn, dcs}
+    case W.Project{i, n, ds, k, sn, dcs} True{}: W.Project{i, n, doc <> ds, k, id, dcs}
 
 def deliver_projects(ps: List<&2, W.Project>, +project: Nat, +id: String, +doc: W.Diagram) -> List<&2, W.Project>:
   match ps:
     case Nil{}: Nil{}
-    case W.Project{+i, n, ds, k, sn} <> t:
-      deliver(W.Project{i, n, ds, k, sn}, doc, id, Nat.is_eq(i, project)) <> deliver_projects(t, project, id, doc)
+    case W.Project{+i, n, ds, k, sn, dcs} <> t:
+      deliver(W.Project{i, n, ds, k, sn, dcs}, doc, id, Nat.is_eq(i, project)) <> deliver_projects(t, project, id, doc)
 
 # ---------- An agent updates its own diagram ----------
 # A message whose title names a diagram the agents sent before (it has a sender line) is a newer version of it:
@@ -63,7 +63,7 @@ def deliver_projects(ps: List<&2, W.Project>, +project: Nat, +id: String, +doc: 
 # a message with their name becomes a new diagram.
 def is_agent_named(d: W.Diagram, +name: String) -> Bool:
   match d:
-    case W.Diagram{i, n, s, h}: String.eq(n, name) && Bool.not(String.is_empty(sender(s)))
+    case W.Diagram{i, n, s, h, wy}: String.eq(n, name) && Bool.not(String.is_empty(sender(s)))
 
 def has_agent_named(ds: List<&2, W.Diagram>, +name: String) -> Bool:
   match ds:
@@ -82,19 +82,19 @@ def refresh_diagrams(ds: List<&2, W.Diagram>, +name: String, +text: String, +sta
 
 def refresh_project(p: W.Project, +name: String, +text: String, +stamp: String, +id: String, selected: Bool) -> W.Project:
   match p selected:
-    case W.Project{i, n, ds, k, sn} False{}: W.Project{i, n, ds, k, sn}
-    case W.Project{i, n, ds, k, sn} True{}: W.Project{i, n, refresh_diagrams(ds, name, text, stamp), k, id}
+    case W.Project{i, n, ds, k, sn, dcs} False{}: W.Project{i, n, ds, k, sn, dcs}
+    case W.Project{i, n, ds, k, sn, dcs} True{}: W.Project{i, n, refresh_diagrams(ds, name, text, stamp), k, id, dcs}
 
 def refresh_projects(ps: List<&2, W.Project>, +project: Nat, +name: String, +text: String, +stamp: String, +id: String) -> List<&2, W.Project>:
   match ps:
     case Nil{}: Nil{}
-    case W.Project{+i, n, ds, k, sn} <> t:
-      refresh_project(W.Project{i, n, ds, k, sn}, name, text, stamp, id, Nat.is_eq(i, project)) <> refresh_projects(t, project, name, text, stamp, id)
+    case W.Project{+i, n, ds, k, sn, dcs} <> t:
+      refresh_project(W.Project{i, n, ds, k, sn, dcs}, name, text, stamp, id, Nat.is_eq(i, project)) <> refresh_projects(t, project, name, text, stamp, id)
 
 def updates_existing(ps: List<&2, W.Project>, +project: Nat, +name: String) -> Bool:
   match ps:
     case Nil{}: False{}
-    case W.Project{i, n, ds, k, sn} <> t: (Nat.is_eq(i, project) && has_agent_named(ds, name)) || updates_existing(t, project, name)
+    case W.Project{i, n, ds, k, sn, dcs} <> t: (Nat.is_eq(i, project) && has_agent_named(ds, name)) || updates_existing(t, project, name)
 
 def receive_checked(w: W.Workspace, +project: Nat, +id: String, +title: String, +text: String, +stamp: String, ok: Bool, update: Bool) -> W.Workspace:
   match w ok update:
@@ -116,8 +116,8 @@ def receive(w: W.Workspace, +project: Nat, +key: String, +id: String, +title: St
 def rekey_projects(ps: List<&2, W.Project>, +project: Nat, +key: String) -> List<&2, W.Project>:
   match ps:
     case Nil{}: Nil{}
-    case W.Project{+i, +n, +ds, +k, +sn} <> t:
-      Bool.pick(W.Project, Nat.is_eq(i, project) && Bool.not(String.is_empty(k)) && Bool.not(String.is_empty(key)), W.Project{i, n, ds, key, ""}, W.Project{i, n, ds, k, sn}) <> rekey_projects(t, project, key)
+    case W.Project{+i, +n, +ds, +k, +sn, +dcs} <> t:
+      Bool.pick(W.Project, Nat.is_eq(i, project) && Bool.not(String.is_empty(k)) && Bool.not(String.is_empty(key)), W.Project{i, n, ds, key, "", dcs}, W.Project{i, n, ds, k, sn, dcs}) <> rekey_projects(t, project, key)
 
 def new_key(w: W.Workspace, +project: Nat, key: String) -> W.Workspace:
   match w:
@@ -129,8 +129,8 @@ def new_key(w: W.Workspace, +project: Nat, key: String) -> W.Workspace:
 def connect_projects(ps: List<&2, W.Project>, +project: Nat, +key: String) -> List<&2, W.Project>:
   match ps:
     case Nil{}: Nil{}
-    case W.Project{+i, +n, +ds, +k, +sn} <> t:
-      Bool.pick(W.Project, Nat.is_eq(i, project) && String.is_empty(k) && Bool.not(String.is_empty(key)), W.Project{i, n, ds, key, ""}, W.Project{i, n, ds, k, sn}) <> connect_projects(t, project, key)
+    case W.Project{+i, +n, +ds, +k, +sn, +dcs} <> t:
+      Bool.pick(W.Project, Nat.is_eq(i, project) && String.is_empty(k) && Bool.not(String.is_empty(key)), W.Project{i, n, ds, key, "", dcs}, W.Project{i, n, ds, k, sn, dcs}) <> connect_projects(t, project, key)
 
 def connect_agent(w: W.Workspace, +project: Nat, key: String) -> W.Workspace:
   match w:
