@@ -8,11 +8,17 @@ import { nameDialog, confirmDelete } from './dialogs.js';
 import { newKey, agentInstructions, replaceKey } from './agent.js';
 import { openDocument, discardDocument } from './document-view.js';
 
+// One project is open at a time. The lib closes the others when one is opened (ui.js); a redraw keeps the one
+// that was open, and going to another project opens that one.
+let heads=[],openProject=null,shown=null;
 export function renderNavigation(){
-  const root=$('#project-list');root.replaceChildren();
+  const root=$('#project-list'),now=S.docId===null?S.workspace.project:S.docProject;
+  if(heads.length)openProject=heads.find(([,h])=>h.getAttribute('aria-expanded')==='true')?.[0]??null;
+  if(now!==shown){openProject=now;shown=now;}
+  heads=[];root.replaceChildren();
   for(const p of array(S.workspace.projects)){
     const group=element('div','side__section'),head=element('button','btn btn--ghost side__toggle'),items=element('div','side__items');
-    head.type='button';head.title=p.name;head.setAttribute('aria-expanded','true');
+    head.type='button';head.title=p.name;head.setAttribute('aria-expanded',String(p.id===openProject));heads.push([p.id,head]);
     head.append(icon(p.inbox?'wand-sparkles':'file-text'),element('span','side__text',p.name),icon('chevron-down','icon icon--sm side__chevron'));
     for(const d of array(p.diagrams)){
       const from=A.sender(d.source),b=navButton(d.name,()=>switchTo(p.id,d.id),from?'wand-sparkles':undefined);if(from)b.title=`${d.name} · from ${from}`;
